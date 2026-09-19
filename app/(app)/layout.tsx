@@ -1,0 +1,15 @@
+import { AppSidebar } from "@/components/app-sidebar";
+import { reviewQueue } from "@/lib/seed";
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const dueCount = reviewQueue().length;
+
+  return (
+    <div className="flex min-h-full">
+      <AppSidebar dueCount={dueCount} />
+      <div className="min-w-0 flex-1 bg-background">
+        <div className="mx-auto w-full max-w-5xl px-8 py-8">{children}</div>
+      </div>
+    </div>
+  );
+}

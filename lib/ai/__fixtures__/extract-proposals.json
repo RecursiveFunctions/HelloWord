@@ -1,0 +1,32 @@
+[
+  {
+    "exact": "FSRS estimates retrievability from a memory model, not from an ease factor you twist by hand.",
+    "priority": 10,
+    "reason": "States the core claim of the essay in one sentence.",
+    "concepts": ["FSRS", "retrievability"]
+  },
+  {
+    "exact": "The model tracks two latent variables per card: stability (how long retrievability takes to fall from 100% to 90%) and difficulty (how hard the item is to learn).",
+    "priority": 14,
+    "reason": "Names the two variables any later activity should test.",
+    "concepts": ["FSRS", "retrievability"]
+  },
+  {
+    "exact": "Call it an A-factor if you want the SuperMemo muscle memory, but store it beside the card, apply it after FSRS speaks, and never feed the scaled interval back into stability.",
+    "priority": 18,
+    "reason": "The product decision: overlay, do not rewrite memory state.",
+    "concepts": ["A-factor", "FSRS"]
+  },
+  {
+    "exact": "If you compress wall-clock time without compressing the unit of a day, FSRS concludes you recalled the card far too early and inflates stability.",
+    "priority": 12,
+    "reason": "The demo-mode failure mode, worth a dedicated note.",
+    "concepts": ["virtual clock", "FSRS"]
+  },
+  {
+    "exact": "You have not faked the schedule. You have changed the clock.",
+    "priority": 22,
+    "reason": "Short, quotable, good closed-question material.",
+    "concepts": ["virtual clock"]
+  }
+]

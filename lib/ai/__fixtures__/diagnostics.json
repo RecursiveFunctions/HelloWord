@@ -1,0 +1,15 @@
+{
+  "struggling": [
+    {
+      "concept": "virtual clock",
+      "why": "Recall holds, but the idea still gets mixed up with 'just shrink the intervals'."
+    },
+    {
+      "concept": "anchoring",
+      "why": "Fewer reviews than the other incremental-reading concepts."
+    }
+  ],
+  "known": ["FSRS", "extract", "note"],
+  "untouched": [],
+  "next_action": "Open the virtual-clock note, rewrite the demo-mode paragraph in your own words, then regenerate the fill-in-the-blank."
+}

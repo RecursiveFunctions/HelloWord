@@ -1,0 +1,34 @@
+{
+  "activities": [
+    {
+      "type": "mcq",
+      "stem": "Where should an A-factor be applied in this product?",
+      "options": [
+        "By editing stability after a Good",
+        "After FSRS chooses an interval",
+        "Inside request_retention",
+        "On the source markdown at ingest"
+      ],
+      "answer": 1,
+      "explanation": "It is an overlay on the output interval."
+    },
+    {
+      "type": "select_all",
+      "stem": "Which of these are latent variables FSRS tracks per card?",
+      "options": ["Stability", "Difficulty", "A-factor", "Priority"],
+      "answers": [0, 1]
+    },
+    {
+      "type": "fill_blank",
+      "template": "Demo mode must redefine the unit of a {{1}} in both directions.",
+      "blanks": [{ "id": 1, "accepted": ["day"] }]
+    },
+    {
+      "type": "closed",
+      "stem": "What does FSRS estimate retrievability from?",
+      "answer": "a memory model",
+      "accepted": ["stability and difficulty", "the memory model"],
+      "hint": "Not an ease factor."
+    }
+  ]
+}

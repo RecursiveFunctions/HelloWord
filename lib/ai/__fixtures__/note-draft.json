@@ -1,0 +1,5 @@
+{
+  "title": "FSRS overlays, not ease",
+  "body_md": "FSRS estimates retrievability from stability and difficulty, not from an ease factor. If I want an A-factor, it multiplies the interval after the model speaks and is never written back into stability. Demo mode has to change the length of a day in both directions or the diagnostics lie.",
+  "concepts": ["FSRS", "A-factor", "virtual clock", "retrievability"]
+}
