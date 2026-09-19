@@ -94,6 +94,12 @@ export const TtsBody = z.object({
 export const GradeBody = z.object({
   activityId: z.string().uuid(),
   response: ActivityResponse,
+  /**
+   * The reviewer's own Again/Hard/Good/Easy press, which is what FSRS actually
+   * consumes. Omit it to let the server derive a rating from correctness:
+   * auto-graded surfaces (voice, a quiz scored in bulk) have no one to ask.
+   */
+  rating: Rating.optional(),
   mode: z.enum(["queue", "quiz", "voice"]).default("queue"),
   durationMs: z.number().int().nonnegative().optional(),
 });
