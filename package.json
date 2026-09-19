@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:generate-seed": "tsx scripts/generate-seed.ts",
-    "smoke": "tsx scripts/smoke-sponsors.ts"
+    "smoke": "tsx scripts/smoke-sponsors.ts",
+    "smoke:ai": "tsx scripts/ai-smoke.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
