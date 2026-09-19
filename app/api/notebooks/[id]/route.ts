@@ -1,0 +1,56 @@
+import { z } from "zod";
+import {
+  deleteNotebook,
+  getNotebook,
+  listNotebookItems,
+  updateNotebook,
+} from "@/lib/store/notebooks";
+import { invalid, notFound, ok, readJson } from "../../_respond";
+
+const PatchNotebookBody = z.object({
+  name: z.string().min(1).max(120).optional(),
+  description: z.string().max(500).nullable().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Use a six-digit hex colour, e.g. #1d4ed8.")
+    .nullable()
+    .optional(),
+});
+
+export async function GET(
+  _request: Request,
+  context: RouteContext<"/api/notebooks/[id]">,
+): Promise<Response> {
+  const { id } = await context.params;
+  const notebook = await getNotebook(id);
+  if (!notebook) return notFound("Notebook");
+
+  return ok({ notebook, items: await listNotebookItems(id) });
+}
+
+export async function PATCH(
+  request: Request,
+  context: RouteContext<"/api/notebooks/[id]">,
+): Promise<Response> {
+  const { id } = await context.params;
+  const parsed = PatchNotebookBody.safeParse(await readJson(request));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const notebook = await updateNotebook(id, parsed.data);
+  if (!notebook) return notFound("Notebook");
+  return ok({ notebook });
+}
+
+/**
+ * Deleting a notebook deletes its membership rows and nothing else. A notebook
+ * references sources and notes; it never owns them.
+ */
+export async function DELETE(
+  _request: Request,
+  context: RouteContext<"/api/notebooks/[id]">,
+): Promise<Response> {
+  const { id } = await context.params;
+  const deleted = await deleteNotebook(id);
+  if (!deleted) return notFound("Notebook");
+  return ok({ deleted: id });
+}
