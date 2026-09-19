@@ -1,10 +1,12 @@
 /**
- * Row shapes for the tables workstream A owns: `source`, `notebook`,
- * `notebook_item`, and the additive `feed` table from migration 100.
+ * Row shapes for the tables the store reads: `source`, `notebook`,
+ * `notebook_item`, the additive `feed` table from migration 100, and the
+ * review side — `activity`, `schedule`, `scheduler_profile`, `review_event`.
  *
  * Timestamps are ISO strings on the way out, whichever backend produced them,
  * so Server Components can hand them to Client Components without a serializer.
  */
+import type { ActivityPayload, Rating } from "@/lib/contracts/activity";
 
 export type IngestStatus = "pending" | "processing" | "ready" | "failed";
 
@@ -52,6 +54,72 @@ export type FeedRow = {
   site_url: string | null;
   last_fetched_at: string | null;
   created_at: string;
+};
+
+export type ActivityRow = {
+  id: string;
+  note_id: string;
+  type: ActivityPayload["type"];
+  payload: ActivityPayload;
+  source_body_hash: string;
+  variant_of: string | null;
+  created_at: string;
+};
+
+/**
+ * One row per card. `due` and `last_review` are always wall-clock: the virtual
+ * clock lives entirely inside `lib/fsrs`, so `where due <= now()` stays true
+ * no matter which preset is active.
+ */
+export type ScheduleRow = {
+  activity_id: string;
+  due: string;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  learning_steps: number;
+  reps: number;
+  lapses: number;
+  /** ts-fsrs State: 0 New, 1 Learning, 2 Review, 3 Relearning. */
+  state: number;
+  last_review: string | null;
+  /** Per-card interval multiplier applied after FSRS. 1.0 is "as FSRS said". */
+  a_factor: number;
+};
+
+export type SchedulerProfileRow = {
+  id: string;
+  name: string;
+  request_retention: number;
+  maximum_interval: number;
+  learning_steps: string[];
+  relearning_steps: string[];
+  enable_fuzz: boolean;
+  interval_modifier: number;
+  day_ms: number;
+  /**
+   * Milliseconds added to wall-clock time for every review query. Non-zero
+   * means the reviewer has skipped ahead to reach the next card; it shifts the
+   * observer, never the schedule.
+   */
+  clock_offset_ms: number;
+  created_at: string;
+};
+
+export type ReviewEventRow = {
+  time: string;
+  activity_id: string;
+  note_id: string;
+  concept_id: string | null;
+  rating: Rating;
+  state: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  stability: number;
+  difficulty: number;
+  duration_ms: number | null;
+  mode: "queue" | "quiz" | "voice";
 };
 
 /** pg returns `timestamptz` as a Date; the seed and memory store use strings. */

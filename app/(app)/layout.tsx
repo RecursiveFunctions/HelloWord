@@ -1,8 +1,15 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import { reviewQueue } from "@/lib/seed";
+import { dueCounts } from "@/lib/fsrs/queue";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const dueCount = reviewQueue().length;
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Same source of truth as the Review screen. Counting against the frozen
+  // seed clock instead would put a different number in the badge than the one
+  // the queue actually serves.
+  const { total: dueCount } = await dueCounts();
 
   return (
     <div className="flex min-h-full">

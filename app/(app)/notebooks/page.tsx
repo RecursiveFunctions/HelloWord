@@ -14,31 +14,20 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { notebookSparkline, schedules, SEED_NOW } from "@/lib/seed";
-import { listNotebooks, membershipIndex } from "@/lib/store/notebooks";
+import { notebookSparkline } from "@/lib/seed";
+import { dueCounts } from "@/lib/fsrs/queue";
+import { listNotebooks } from "@/lib/store/notebooks";
 import { NewNotebook } from "./new-notebook";
 
 export const dynamic = "force-dynamic";
 
 export default async function NotebooksPage() {
-  const [notebooks, membership] = await Promise.all([
+  // The same rollup the Review screen serves, so a notebook's badge and its
+  // queue never disagree.
+  const [notebooks, { byNotebook }] = await Promise.all([
     listNotebooks(),
-    membershipIndex(),
+    dueCounts(),
   ]);
-
-  // Due counts come from the notebook's own membership rows rather than the
-  // seed's, so a notebook created a minute ago counts correctly.
-  const dueByNotebook = new Map(
-    notebooks.map((notebook) => {
-      const members = membership.get(notebook.id) ?? new Set<string>();
-      const due = schedules.filter(
-        (schedule) =>
-          members.has(schedule.activity_id) &&
-          new Date(schedule.due) <= SEED_NOW,
-      ).length;
-      return [notebook.id, due];
-    }),
-  );
 
   return (
     <div>
@@ -66,7 +55,7 @@ export default async function NotebooksPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {notebooks.map((notebook) => {
-            const due = dueByNotebook.get(notebook.id) ?? 0;
+            const due = byNotebook[notebook.id] ?? 0;
             const color = notebook.color ?? "var(--color-primary)";
             const spark = notebookSparkline({
               ...notebook,
