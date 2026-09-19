@@ -1,0 +1,33 @@
+/*
+ * Extract highlights are painted with the CSS Custom Highlight API rather than
+ * by wrapping text in <mark>. Wrapping would insert elements into the source
+ * pane and break the 1:1 mapping between rendered text and markdown offsets
+ * that all anchoring depends on.
+ *
+ * Only a handful of properties are honoured inside ::highlight(): color,
+ * background-color, text-decoration, text-shadow, and -webkit-text-stroke.
+ *
+ * `next build` prints "'highlight' is not recognized as a valid pseudo-element"
+ * for each rule below. Lightning CSS does not know ::highlight() yet and passes
+ * the file through unprocessed, which is exactly what we want - the rules reach
+ * the bundle verbatim. Do not "fix" the warning by deleting them.
+ */
+
+::highlight(extract) {
+  background-color: color-mix(in oklab, var(--chart-4) 34%, transparent);
+}
+
+::highlight(extract-active) {
+  background-color: color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+::highlight(extract-orphaned) {
+  background-color: color-mix(in oklab, var(--destructive) 16%, transparent);
+  text-decoration: underline wavy var(--destructive);
+  text-underline-offset: 4px;
+}
+
+::highlight(extract-proposal) {
+  text-decoration: underline dashed color-mix(in oklab, var(--primary) 70%, transparent);
+  text-underline-offset: 5px;
+}
