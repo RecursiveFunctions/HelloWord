@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --import tsx --test \"lib/**/*.test.ts\"",
     "db:generate-seed": "tsx scripts/generate-seed.ts",
     "smoke": "tsx scripts/smoke-sponsors.ts"
   },
