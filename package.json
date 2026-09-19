@@ -12,7 +12,8 @@
     "lint": "eslint",
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
     "db:generate-seed": "tsx scripts/generate-seed.ts",
-    "smoke": "tsx scripts/smoke-sponsors.ts"
+    "smoke": "tsx scripts/smoke-sponsors.ts",
+    "smoke:ai": "tsx scripts/ai-smoke.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
