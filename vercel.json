@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/sources/**": { "maxDuration": 60 },
+    "app/api/feeds/**": { "maxDuration": 30 },
+    "app/api/ai/**": { "maxDuration": 60 },
+    "app/api/report/**": { "maxDuration": 60 }
+  }
+}
