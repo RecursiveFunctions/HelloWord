@@ -27,6 +27,7 @@ export type PaintedExtract = {
 type SourcePaneProps = {
   markdown: string;
   extracts: readonly PaintedExtract[];
+  proposals?: readonly PaintedExtract[];
   activeExtractId?: string | null;
   onActivateExtract?: (id: string | null) => void;
 };
@@ -118,6 +119,7 @@ function BlockView({ block }: { block: Block }) {
 export function SourcePane({
   markdown,
   extracts,
+  proposals = [],
   activeExtractId,
   onActivateExtract,
 }: SourcePaneProps) {
@@ -144,13 +146,15 @@ export function SourcePane({
     paint("extract", anchored);
     paint("extract-orphaned", orphaned);
     paint("extract-active", active);
+    paint("extract-proposal", proposals);
 
     return () => {
       clearHighlight("extract");
       clearHighlight("extract-orphaned");
       clearHighlight("extract-active");
+      clearHighlight("extract-proposal");
     };
-  }, [blocks, extracts, activeExtractId]);
+  }, [blocks, extracts, proposals, activeExtractId]);
 
   // Painted highlights are not elements, so hit-testing uses the markdown
   // offset under the pointer, not the start of the clicked block.

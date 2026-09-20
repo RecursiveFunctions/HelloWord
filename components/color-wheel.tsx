@@ -35,7 +35,7 @@ export function ColorWheel() {
   useEffect(() => {
     const current = document.documentElement.dataset.theme;
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (isThemeId(current ?? null)) setTheme(current);
+    if (isThemeId(current ?? null)) setTheme(current as ThemeId);
     else if (isThemeId(saved)) setTheme(saved);
     else setTheme(DEFAULT_THEME);
   }, []);
