@@ -42,6 +42,16 @@ export type NoteRow = {
   updated_at: string;
 };
 
+export type ConceptRow = {
+  id: string;
+  label: string;
+};
+
+export type ConceptNoteRow = {
+  concept_id: string;
+  note_id: string;
+};
+
 export type ExtractRow = {
   id: string;
   source_id: string | null;

@@ -213,23 +213,65 @@ async function smokeTiger(): Promise<Result> {
       };
     }
     const tables = await pool.query<{ relname: string }>(
-      `select relname from pg_class where relname in ('source', 'review_event', 'review_daily')`,
+      `select relname from pg_class
+       where relname in ('source', 'note', 'concept', 'review_event', 'review_daily')`,
     );
     const present = new Set(tables.rows.map((r) => r.relname));
     if (!present.has("source")) {
       return {
         name: "Tiger Cloud",
         ok: true,
-        detail: `Connected (${names.join(", ")}). Schema not applied yet — run: psql "$DATABASE_URL" -f db/schema.sql && psql "$DATABASE_URL" -f db/seed.sql`,
+        detail: `Connected (${names.join(", ")}). Schema not applied yet — run schema, migrations, then seed as documented in db/README.md.`,
+      };
+    }
+    const expected = ["source", "note", "concept", "review_event", "review_daily"];
+    const missingRelations = expected.filter((name) => !present.has(name));
+    if (missingRelations.length > 0) {
+      return {
+        name: "Tiger Cloud",
+        ok: false,
+        detail: `Schema is incomplete. Missing: ${missingRelations.join(", ")}. Reapply db/schema.sql to an empty service.`,
+      };
+    }
+
+    const [hypertable, aggregate, policy, migration, indexes] = await Promise.all([
+      pool.query(`select 1 from timescaledb_information.hypertables
+                  where hypertable_name = 'review_event'`),
+      pool.query(`select 1 from timescaledb_information.continuous_aggregates
+                  where view_name = 'review_daily'`),
+      pool.query(`select 1 from timescaledb_information.jobs
+                  where proc_name = 'policy_refresh_continuous_aggregate'
+                    and hypertable_name = 'review_daily'`),
+      pool.query(`select 1 from information_schema.columns
+                  where table_name = 'scheduler_profile'
+                    and column_name = 'clock_offset_ms'`),
+      pool.query<{ indexname: string }>(
+        `select indexname from pg_indexes
+         where indexname in ('extract_embedding_idx', 'note_embedding_idx')`,
+      ),
+    ]);
+    const problems = [
+      hypertable.rowCount ? null : "review_event is not a hypertable",
+      aggregate.rowCount ? null : "review_daily is not a continuous aggregate",
+      policy.rowCount ? null : "review_daily refresh policy is missing",
+      migration.rowCount ? null : "migration 400_review_clock.sql is missing",
+      indexes.rowCount === 2 ? null : "DiskANN indexes are incomplete",
+    ].filter(Boolean);
+    if (problems.length > 0) {
+      return {
+        name: "Tiger Cloud",
+        ok: false,
+        detail: `Connected, but Tiger setup is incomplete: ${problems.join("; ")}.`,
       };
     }
     const events = present.has("review_event")
       ? await pool.query<{ n: string }>(`select count(*)::text as n from review_event`)
       : { rows: [{ n: "0" }] };
+    const notes = await pool.query<{ n: string }>(`select count(*)::text as n from note`);
     return {
       name: "Tiger Cloud",
       ok: true,
-      detail: `Connected, schema present, review_event rows=${events.rows[0]?.n ?? "?"}.`,
+      detail: `Connected; hypertable, review_daily policy, migration, and DiskANN indexes verified. note rows=${notes.rows[0]?.n ?? "?"}, review_event rows=${events.rows[0]?.n ?? "?"}.`,
     };
   } catch (error) {
     return {
@@ -250,11 +292,9 @@ async function main() {
     smokeTiger(),
   ]);
 
-  let failed = 0;
   for (const result of results) {
     const mark = result.ok ? "ok " : "FAIL";
     console.log(`\n[${mark}] ${result.name}\n  ${result.detail}`);
-    if (!result.ok) failed += 1;
   }
 
   const required = results.filter((r) => r.name !== "Nemotron failover (DigitalOcean)");
