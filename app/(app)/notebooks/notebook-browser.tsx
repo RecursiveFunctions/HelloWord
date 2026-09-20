@@ -199,7 +199,7 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
         {notebook.coverSrc ? (
           <img
             src={notebook.coverSrc}
-            alt={`Screenshot of current content in ${notebook.name}`}
+            alt={`Cover image for ${notebook.name}`}
             className="aspect-[16/10] w-full object-cover"
           />
         ) : (
