@@ -36,7 +36,7 @@ const SECTIONS: { type: LibraryItemType; heading: string; empty: string }[] = [
 
 export function NotebookContents({
   notebookId,
-  items,
+  items: libraryRows,
   libraryItems,
   initialView = "cards",
   fromQuery = false,
@@ -49,6 +49,12 @@ export function NotebookContents({
   fromQuery?: boolean;
 }) {
   const router = useRouter();
+  // Carry the notebook into the reader so its breadcrumb can show where you came from.
+  const items = libraryRows.map((item) =>
+    item.href
+      ? { ...item, href: `${item.href}?notebook=${notebookId}` }
+      : item,
+  );
   const { view, choose } = useWorkspaceView({ initialView, fromQuery });
   const [removing, setRemoving] = useState<string | null>(null);
   const { upload, busy, notice, supported } = useNotebookUpload(notebookId);

@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Sparkline } from "@/components/sparkline";
@@ -63,10 +64,12 @@ export default async function NotebookDetailPage({
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-sm text-muted-foreground">
+        <p className="flex items-center gap-1 text-sm text-muted-foreground">
           <Link href="/notebooks" className="hover:underline">
             Notebooks
           </Link>
+          <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate text-foreground">{notebook.name}</span>
         </p>
         <div className="mt-2 flex items-center gap-3">
           <span

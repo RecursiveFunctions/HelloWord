@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
 import { parseBlocks } from "@/lib/editor/blocks";
 import { extractNotes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
+import { getNotebook } from "@/lib/store/notebooks";
 import { getNote, listNotes } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
@@ -35,24 +37,37 @@ function SourceHeader({
 	source,
 	detail,
 	showTitle,
+	notebook,
 }: {
 	source: SourceRow;
 	detail: string;
 	showTitle: boolean;
+	notebook: { id: string; name: string } | null;
 }) {
+	const chevron = <ChevronRight className="size-3.5 shrink-0" aria-hidden />;
 	return (
 		<header className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 lg:px-10 lg:py-5">
-			<p className="truncate text-sm text-muted-foreground">
-				<Link href="/notebooks" className="hover:underline">
-					HelloWord
-				</Link>
-				<span className="mx-2">/</span>
-				<Link href="/library" className="hover:underline">
-					Library
-				</Link>
-				<span className="mx-2">/</span>
-				{source.kind}
-				{source.ingest_method ? ` · ${source.ingest_method}` : ""}
+			<p className="flex items-center gap-1 text-sm text-muted-foreground">
+				{notebook ? (
+					<>
+						<Link href="/notebooks" className="shrink-0 hover:underline">
+							Notebooks
+						</Link>
+						{chevron}
+						<Link
+							href={`/notebooks/${notebook.id}`}
+							className="truncate hover:underline"
+						>
+							{notebook.name}
+						</Link>
+					</>
+				) : (
+					<Link href="/library" className="shrink-0 hover:underline">
+						Library
+					</Link>
+				)}
+				{chevron}
+				<span className="truncate text-foreground">{source.title}</span>
 			</p>
 			{showTitle ? (
 				<h1 className="mt-1 line-clamp-2 font-heading text-xl tracking-tight sm:mt-2 sm:text-2xl lg:text-3xl">
@@ -111,15 +126,22 @@ async function PdfNoteRail() {
 
 export default async function ReadPage({
 	params,
+	searchParams,
 }: {
 	params: Promise<{ id: string }>;
+	searchParams: Promise<{ notebook?: string }>;
 }) {
 	const { id } = await params;
-	const [source, rawExtracts] = await Promise.all([
+	const { notebook: notebookId } = await searchParams;
+	const [source, rawExtracts, notebookRow] = await Promise.all([
 		getSource(id),
 		listSourceExtracts(id),
+		notebookId ? getNotebook(notebookId) : null,
 	]);
 	if (!source) notFound();
+	const notebook = notebookRow
+		? { id: notebookRow.id, name: notebookRow.name }
+		: null;
 
 	const anchoredExtracts = rawExtracts.filter(
 		(e) => e.anchor_status !== "detached",
@@ -166,6 +188,7 @@ export default async function ReadPage({
 					source={source}
 					detail={detail}
 					showTitle={showTitle}
+					notebook={notebook}
 				/>
 				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<ReaderShell
@@ -202,6 +225,7 @@ export default async function ReadPage({
 					source={source}
 					detail={detail}
 					showTitle={showTitle}
+					notebook={notebook}
 				/>
 
 				<div
