@@ -25,42 +25,69 @@ import {
 } from "./spaces";
 
 export type StoredPdf = {
-  storage_key: string;
+  /**
+   * Null when no durable store was available, so the original was not kept.
+   * The source is still ingested: markdown is what extracts and notes read,
+   * and the reader already handles a PDF whose original is missing.
+   */
+  storage_key: string | null;
   origin_uri: string;
+  /** Why the original was not archived. Set only alongside a null key. */
+  unarchived?: string;
 };
 
 function requiresDurableStorage(): boolean {
   return process.env.VERCEL === "1" || process.env.VERCEL === "true";
 }
 
-function durableStorageError(cause?: unknown): Error {
-  const error = new Error(
-    "PDF uploads on Vercel require DigitalOcean Spaces. Configure the DO_SPACES_* environment variables and redeploy.",
-  );
-  if (cause !== undefined) error.cause = cause;
-  return error;
-}
+const NO_DURABLE_STORE =
+  "Serverless filesystems do not survive the request, and Spaces is not configured. Set SPACES_KEY, SPACES_SECRET, and SPACES_BUCKET to keep original PDFs.";
 
+/**
+ * Archive the original if there is anywhere durable to put it.
+ *
+ * Never throws. Losing the archive must not lose the upload: extraction runs
+ * from the bytes already in memory, so a source with no `storage_key` still
+ * becomes a readable, extractable source. It only loses the "open original
+ * PDF" affordance, which the reader already words for that case.
+ */
 export async function persistPdf(
   filename: string,
   bytes: Uint8Array,
 ): Promise<StoredPdf> {
   const key = pdfKey(filename);
+
   if (spacesConfigured()) {
     try {
       await putPdf(key, bytes);
       return { storage_key: key, origin_uri: spacesUri(key) };
     } catch (error) {
-      if (requiresDurableStorage()) throw durableStorageError(error);
-      console.error("Spaces upload failed; storing PDF on disk instead", error);
+      console.error("Spaces upload failed", error);
+      if (requiresDurableStorage()) {
+        return skipped(key, `The Spaces upload failed: ${describe(error)}`);
+      }
+      console.error("Storing the PDF on disk instead");
     }
   }
 
-  if (requiresDurableStorage()) throw durableStorageError();
+  if (requiresDurableStorage()) return skipped(key, NO_DURABLE_STORE);
 
   const localKey = `local:${key}`;
-  await writeLocalPdf(localKey, bytes);
+  try {
+    await writeLocalPdf(localKey, bytes);
+  } catch (error) {
+    console.error("Could not write the PDF to data/pdfs", error);
+    return skipped(key, `Could not write to data/pdfs: ${describe(error)}`);
+  }
   return { storage_key: localKey, origin_uri: `upload://${key}` };
+}
+
+function skipped(key: string, reason: string): StoredPdf {
+  return { storage_key: null, origin_uri: `upload://${key}`, unarchived: reason };
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export async function readStoredPdf(key: string): Promise<Uint8Array> {

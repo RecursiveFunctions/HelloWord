@@ -68,7 +68,7 @@ export function AddMenu({
       onError(result.error);
       return;
     }
-    router.push(`/read/${result.id}`);
+    router.push(`/notes/${result.id}?notebook=${notebookId}`);
   }
 
   return (

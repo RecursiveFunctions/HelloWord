@@ -21,7 +21,11 @@ export async function extractPdf(
   bytes: Uint8Array,
   fallbackTitle: string,
 ): Promise<PdfExtraction> {
-  const pdf = await getDocumentProxy(bytes);
+  // PDF.js takes ownership of the buffer it is handed and detaches it, which
+  // leaves the caller holding a zero-length view. `ingestPdf` passes the same
+  // bytes to the Gemini fallback when there is no text layer, so it would have
+  // transcribed an empty document. Copy, and let this function own the copy.
+  const pdf = await getDocumentProxy(new Uint8Array(bytes));
   const { totalPages, text } = await extractText(pdf, { mergePages: false });
   const pages = Array.isArray(text) ? text : [text];
 

@@ -50,6 +50,7 @@ export function noteItem(note: NoteRow): LibraryItem {
     title: note.title,
     subtitle: note.body_md.trim(),
     meta: [note.origin, `updated ${new Date(note.updated_at).toLocaleDateString()}`],
+    href: `/notes/${note.id}`,
   };
 }
 
@@ -64,6 +65,8 @@ export function extractItem(extract: ExtractRow): LibraryItem {
       extract.anchor_status,
       extract.suggested_by,
     ],
+    // Extracts are vetted in the reader of the source they came from.
+    href: extract.source_id ? `/read/${extract.source_id}` : undefined,
   };
 }
 

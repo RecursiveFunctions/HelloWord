@@ -128,7 +128,7 @@ async function uploadViaPresign(file: File, notebookId?: string): Promise<Respon
   // 4.5 MB platform cap, so surface the presign error instead.
   if (!presigned.ok) {
     if (presigned.status === 503) return presigned;
-    return uploadDirect(file, notebookId);
+    return directFallback(file, notebookId);
   }
 
   const { key, url, origin_uri } = await presigned.json();
@@ -139,9 +139,9 @@ async function uploadViaPresign(file: File, notebookId?: string): Promise<Respon
       body: file,
       headers: { "content-type": "application/pdf" },
     });
-    if (!put.ok) return uploadDirect(file, notebookId);
+    if (!put.ok) return directFallback(file, notebookId);
   } catch {
-    return uploadDirect(file, notebookId);
+    return directFallback(file, notebookId);
   }
 
   return fetch("/api/sources", {
@@ -155,4 +155,24 @@ async function uploadViaPresign(file: File, notebookId?: string): Promise<Respon
       notebook_id: notebookId,
     }),
   });
+}
+
+/**
+ * The upload straight to Spaces did not happen, so the bytes have to go
+ * through the API after all. A host that caps request bodies rejects a file
+ * this size before the route runs, and that rejection is not JSON, so name the
+ * real problem rather than letting a bare 413 reach the user.
+ */
+async function directFallback(
+  file: File,
+  notebookId?: string,
+): Promise<Response> {
+  const response = await uploadDirect(file, notebookId);
+  if (response.status !== 413) return response;
+  return new Response(
+    JSON.stringify({
+      error: `${file.name} is too large to send through the API. Configure SPACES_KEY, SPACES_SECRET, and SPACES_BUCKET, and allow PUT from this origin on the bucket.`,
+    }),
+    { status: 413, headers: { "content-type": "application/json" } },
+  );
 }
