@@ -154,11 +154,27 @@ Next.js 16 App Router, Tailwind 4, shadcn, Tiger Cloud (pgvector +
 TimescaleDB), `ts-fsrs`, NVIDIA Nemotron with DigitalOcean failover.
 
 ## Team
+Raymond FernandezOwner
+[@RecursiveFunctions](https://github.com/RecursiveFunctions)
+rfernan2@andrew.cmu.edu
 
-[@RecursiveFunctions](https://github.com/RecursiveFunctions),
-[@nullishew](https://github.com/nullishew),
-[@willyumm3rs](https://github.com/willyumm3rs),
+Julia Kobulinsky
 [@jkob15](https://github.com/jkob15)
+jkobul7@gmail.com
+
+
+Ethan Wang
+[@nullishew](https://github.com/nullishew)
+ecwang@andrew.cmu.edu
+
+
+William Amick
+[@willyumm3rs](https://github.com/willyumm3rs)
+williamamick@gmail.com
+
+
+
+
 
 ## Prior art and reused code
 
