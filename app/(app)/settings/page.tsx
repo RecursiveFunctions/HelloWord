@@ -1,11 +1,38 @@
-import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
+import { Clock, Palette, Server, UserRound } from "lucide-react";
 import { ClockPresets } from "@/components/clock-presets";
 import { ColorWheel } from "@/components/color-wheel";
+import { PageHeader } from "@/components/page-header";
+import { PageSection } from "@/components/page-section";
 import { aFactorCopy } from "@/lib/contracts/scheduling";
 import { getProfile } from "@/lib/store/review";
+import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
+
+function Row({
+  label,
+  children,
+  note,
+}: {
+  label: string;
+  children: ReactNode;
+  note?: ReactNode;
+}) {
+  return (
+    <div className="grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[14rem_1fr] sm:gap-6">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd>
+        <div className="text-lg font-semibold">{children}</div>
+        {note ? (
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {note}
+          </p>
+        ) : null}
+      </dd>
+    </div>
+  );
+}
 
 export default async function SettingsPage() {
   const profile = await getProfile();
@@ -26,56 +53,76 @@ export default async function SettingsPage() {
         }
       />
 
-      <section>
+      <PageSection
+        title="Appearance"
+        icon={Palette}
+        description="Pick the colour the whole app is drawn in."
+      >
         <ColorWheel />
-      </section>
+      </PageSection>
 
-      <section>
-        <h2 className="mb-3 font-heading text-lg">Clock preset</h2>
+      <PageSection
+        title="Clock preset"
+        icon={Clock}
+        description="How fast review time passes, so you can watch scheduling work."
+      >
         <ClockPresets dayMs={profile.day_ms} verbose />
-      </section>
+      </PageSection>
 
-      <section>
-        <h2 className="mb-3 font-heading text-lg">Profile</h2>
-        <ul className="space-y-2 text-sm">
-          <li>
-            Request retention <strong>{profile.request_retention}</strong> —
-            raising this is the principled way to see cards more often.
-          </li>
-          <li>
-            Interval modifier <strong>{profile.interval_modifier}</strong> (
-            {aFactorCopy(profile.interval_modifier)})
-          </li>
-          <li>
-            Learning steps{" "}
-            <strong className="font-mono">
+      <PageSection title="Profile" icon={UserRound}>
+        <dl className="divide-y">
+          <Row
+            label="Request retention"
+            note="Raising this is the principled way to see cards more often."
+          >
+            {profile.request_retention}
+          </Row>
+          <Row
+            label="Interval modifier"
+            note={aFactorCopy(profile.interval_modifier)}
+          >
+            {profile.interval_modifier}
+          </Row>
+          <Row
+            label="Learning steps"
+            note="Real-world durations, scaled into the active clock."
+          >
+            <span className="font-mono">
               {profile.learning_steps.join(", ")}
-            </strong>
-            , relearning{" "}
-            <strong className="font-mono">
+            </span>
+          </Row>
+          <Row label="Relearning steps">
+            <span className="font-mono">
               {profile.relearning_steps.join(", ")}
-            </strong>{" "}
-            — real-world durations, scaled into the active clock.
-          </li>
-          <li>
-            Per-card A-factor still sits on each schedule row, range 0.1–5.0.
-          </li>
+            </span>
+          </Row>
+          <Row label="A-factor" note="Per-card, on each schedule row.">
+            0.1–5.0
+          </Row>
           {profile.clock_offset_ms > 0 ? (
-            <li>
-              The review clock is currently skipped ahead. Reset it from the
-              banner on the Review screen.
-            </li>
+            <Row
+              label="Review clock"
+              note="Reset it from the banner on the Review screen."
+            >
+              Skipped ahead
+            </Row>
           ) : null}
-        </ul>
-      </section>
+        </dl>
+      </PageSection>
 
-      <section>
-        <h2 className="mb-3 font-heading text-lg">Environment</h2>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Seed fixtures. Set <code className="font-mono">AI_MOCK=1</code> until
-          C&apos;s client is live.
-        </p>
-      </section>
+      <PageSection
+        title="Environment"
+        icon={Server}
+        description={
+          <>
+            Seed fixtures. Set until C&apos;s client is live:
+          </>
+        }
+      >
+        <code className="rounded-lg bg-muted px-3 py-2 font-mono text-base">
+          AI_MOCK=1
+        </code>
+      </PageSection>
     </div>
   );
 }

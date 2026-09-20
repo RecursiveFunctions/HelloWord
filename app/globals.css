@@ -76,7 +76,9 @@
   --radius: 0.625rem;
   /* Height of the app top bar. Full-bleed screens subtract it from the
      viewport so they fill what is left rather than overflowing past it. */
-  --topbar-h: 3.5rem;
+  --topbar-h: 4rem;
+  /* Phones get a fixed bottom tab bar instead of top-bar nav. */
+  --bottombar-h: calc(4rem + env(safe-area-inset-bottom));
   --sidebar: oklch(0.975 0.003 260);
   --sidebar-foreground: oklch(0.2 0 0);
   --sidebar-primary: oklch(0.32 0.01 260);
@@ -582,5 +584,11 @@
   }
   html {
     @apply font-sans;
+  }
+}
+@media (min-width: 48rem) {
+  :root {
+    --topbar-h: 4.5rem;
+    --bottombar-h: 0px;
   }
 }

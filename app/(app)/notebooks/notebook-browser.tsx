@@ -12,12 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import { NewNotebook } from "./new-notebook";
 import { useFileDrop, useNotebookUpload } from "./use-notebook-upload";
@@ -65,22 +59,21 @@ export function NotebookBrowser({
       />
 
       {items.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>No notebooks yet</EmptyTitle>
-            <EmptyDescription>
-              Create one, then drop files onto it or open it to add sources and notes.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <NewNotebook variant="card" />
+        </div>
       ) : view === "list" ? (
-        <ul className="divide-y rounded-xl border bg-card">
-          {items.map((notebook) => (
-            <NotebookRow key={notebook.id} notebook={notebook} />
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <NewNotebook variant="row" />
+          <ul className="divide-y rounded-xl border bg-card">
+            {items.map((notebook) => (
+              <NotebookRow key={notebook.id} notebook={notebook} />
+            ))}
+          </ul>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <NewNotebook variant="card" />
           {items.map((notebook) => (
             <NotebookCard key={notebook.id} notebook={notebook} />
           ))}
@@ -95,7 +88,7 @@ function NotebookRow({ notebook }: { notebook: NotebookCardModel }) {
     <li>
       <Link
         href={`/notebooks/${notebook.id}`}
-        className="flex items-start gap-3 px-4 py-2.5 text-sm"
+        className="flex min-h-14 items-start gap-3 px-4 py-3 text-sm"
       >
         <span
           className="mt-1.5 size-2.5 shrink-0 rounded-full"

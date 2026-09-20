@@ -60,28 +60,30 @@ export function WorkspaceViewToggle({
   label?: string;
 }) {
   return (
-    <div className="flex gap-1" aria-label={label ?? "Workspace view"}>
+    <div className="flex gap-2" aria-label={label ?? "Workspace view"}>
       <button
         type="button"
         className={buttonVariants({
-          size: "sm",
+          size: "touch",
           variant: view === "list" ? "secondary" : "outline",
         })}
+        aria-label="List view"
         aria-pressed={view === "list"}
         onClick={() => onChange("list")}
       >
-        <List /> List
+        <List /> <span className="hidden sm:inline">List</span>
       </button>
       <button
         type="button"
         className={buttonVariants({
-          size: "sm",
+          size: "touch",
           variant: view === "cards" ? "secondary" : "outline",
         })}
+        aria-label="Card view"
         aria-pressed={view === "cards"}
         onClick={() => onChange("cards")}
       >
-        <LayoutGrid /> Cards
+        <LayoutGrid /> <span className="hidden sm:inline">Cards</span>
       </button>
     </div>
   );

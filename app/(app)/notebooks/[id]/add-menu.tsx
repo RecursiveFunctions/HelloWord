@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookMarked, Link2, Plus, StickyNote, Upload } from "lucide-react";
+import { BookMarked, Link2, StickyNote, Upload } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,17 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { addUrl, createNote, FILE_ACCEPT } from "@/lib/client/upload";
 import type { LibraryItem } from "../../library/items";
+import { cn } from "@/lib/utils";
 import { AddFromLibrary } from "./add-from-library";
 
 /**
@@ -91,30 +86,38 @@ export function AddMenu({
         }}
       />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button disabled={busy || working}>
-              {busy || working ? <Spinner /> : <Plus className="size-4" />} Add
-            </Button>
-          }
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <AddTile
+          icon={Upload}
+          label="Upload file"
+          hint="PDF, text, images"
+          disabled={busy || working}
+          busy={busy}
+          onClick={() => fileInput.current?.click()}
         />
-        <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onClick={() => fileInput.current?.click()}>
-            <Upload /> Upload file
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setUrlOpen(true)}>
-            <Link2 /> Paste URL
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void newNote()}>
-            <StickyNote /> New note
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setLibraryOpen(true)}>
-            <BookMarked /> Add from library
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <AddTile
+          icon={Link2}
+          label="Paste URL"
+          hint="Save a web page"
+          disabled={busy || working}
+          onClick={() => setUrlOpen(true)}
+        />
+        <AddTile
+          icon={StickyNote}
+          label="New note"
+          hint="Write something down"
+          disabled={busy || working}
+          busy={working}
+          onClick={() => void newNote()}
+        />
+        <AddTile
+          icon={BookMarked}
+          label="From library"
+          hint="Reuse a saved item"
+          disabled={busy || working}
+          onClick={() => setLibraryOpen(true)}
+        />
+      </div>
 
       <Dialog open={urlOpen} onOpenChange={setUrlOpen}>
         <DialogContent>
@@ -136,6 +139,7 @@ export function AddMenu({
               onChange={(event) => setUrl(event.target.value)}
               placeholder="https://example.com/an-article"
               type="url"
+              className="h-11 text-base"
               autoFocus
               disabled={working}
             />
@@ -148,11 +152,12 @@ export function AddMenu({
               <Button
                 type="button"
                 variant="ghost"
+                size="touch"
                 onClick={() => setUrlOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={working || !url.trim()}>
+              <Button type="submit" size="touch" disabled={working || !url.trim()}>
                 {working ? <Spinner /> : null} Add
               </Button>
             </DialogFooter>
@@ -167,5 +172,44 @@ export function AddMenu({
         onOpenChange={setLibraryOpen}
       />
     </>
+  );
+}
+
+function AddTile({
+  icon: Icon,
+  label,
+  hint,
+  onClick,
+  disabled,
+  busy,
+}: {
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  onClick: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "flex min-h-24 items-center gap-4 rounded-xl border bg-card px-4 py-3 text-left transition-colors",
+        "hover:border-primary hover:bg-accent/40 active:translate-y-px focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+        "disabled:pointer-events-none disabled:opacity-50",
+      )}
+    >
+      <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        {busy ? <Spinner className="size-6" /> : <Icon className="size-7" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block font-heading text-lg leading-tight">{label}</span>
+        <span className="block truncate text-sm text-muted-foreground">
+          {hint}
+        </span>
+      </span>
+    </button>
   );
 }

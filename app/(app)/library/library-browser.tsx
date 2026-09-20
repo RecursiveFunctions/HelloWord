@@ -111,14 +111,15 @@ export function LibraryBrowser({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
           {FILTERS.map((option) => (
             <Button
               key={option.id}
-              size="sm"
-              variant={filter === option.id ? "default" : "ghost"}
+              size="touch"
+              variant={filter === option.id ? "default" : "outline"}
               onClick={() => setFilter(option.id)}
+              className="shrink-0 rounded-full"
             >
               {option.label}
             </Button>
@@ -128,7 +129,7 @@ export function LibraryBrowser({
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search the library"
-          className="ml-auto w-56"
+          className="h-11 w-full text-base md:ml-auto md:max-w-sm"
         />
       </div>
 
@@ -137,12 +138,12 @@ export function LibraryBrowser({
         // something near the bottom should not mean scrolling back to the top
         // to act on it.
         <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-card/95 px-3 py-2 shadow-sm backdrop-blur">
-          <span className="text-sm font-medium">{selected.size} selected</span>
+          <span className="text-base font-medium">{selected.size} selected</span>
           <NativeSelect
-            size="sm"
+            size="default"
             value={target}
             onChange={(event) => setTarget(event.target.value)}
-            className="ml-auto"
+            className="ml-auto h-11 w-auto text-base"
           >
             {notebooks.map((notebook) => (
               <NativeSelectOption key={notebook.id} value={notebook.id}>
@@ -150,11 +151,11 @@ export function LibraryBrowser({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-          <Button size="sm" onClick={addSelected} disabled={adding || !target}>
+          <Button size="touch" onClick={addSelected} disabled={adding || !target}>
             {adding ? <Spinner /> : <Plus className="size-4" />} Add to notebook
           </Button>
           <Button
-            size="sm"
+            size="touch"
             variant="ghost"
             onClick={() => setSelected(new Set())}
           >

@@ -103,18 +103,22 @@ export function NotebookContents({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {items.length > 0 ? (
+      <AddMenu
+        notebookId={notebookId}
+        libraryItems={libraryItems}
+        busy={busy}
+        onFiles={(files) => void upload(files)}
+        onError={setLocalError}
+      />
+      <p className="-mt-4 text-sm text-muted-foreground">
+        Or drop {supported} files anywhere on this page.
+      </p>
+
+      {items.length > 0 ? (
+        <div className="flex justify-end">
           <WorkspaceViewToggle view={view} onChange={choose} />
-        ) : null}
-        <AddMenu
-          notebookId={notebookId}
-          libraryItems={libraryItems}
-          busy={busy}
-          onFiles={(files) => void upload(files)}
-          onError={setLocalError}
-        />
-      </div>
+        </div>
+      ) : null}
 
       {notice || localError ? (
         <p
@@ -128,21 +132,14 @@ export function NotebookContents({
         </p>
       ) : null}
 
-      {items.length === 0 ? (
-        <p className="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-          Drop {supported} files here, or use Add to paste a URL, write a note,
-          or pull something from your library.
-        </p>
-      ) : null}
-
       {SECTIONS.map((section) => {
         const rows = items.filter((item) => item.type === section.type);
         return (
           <section key={section.type}>
-            <h2 className="mb-3 font-heading text-lg">
+            <h2 className="mb-3 flex items-center gap-3 font-heading text-xl tracking-tight sm:text-2xl">
               {section.heading}
               {rows.length > 0 ? (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-sm font-medium text-muted-foreground">
                   {rows.length}
                 </span>
               ) : null}
@@ -151,7 +148,7 @@ export function NotebookContents({
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{section.empty}</p>
             ) : view === "cards" ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {rows.map((item) => (
                   <ItemCard
                     key={`${item.type}:${item.id}`}
@@ -274,7 +271,7 @@ function ItemActions({
       ) : null}
 
       <Button
-        size="icon-xs"
+        size="icon-touch"
         variant="ghost"
         aria-label={`Remove ${item.title} from this notebook`}
         disabled={removing}
