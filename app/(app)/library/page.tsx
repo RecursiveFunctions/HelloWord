@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/page-header";
 import { listExtracts } from "@/lib/store/extracts";
 import { listNotebooks } from "@/lib/store/notebooks";
 import { listNotes } from "@/lib/store/notes";
@@ -33,12 +34,11 @@ export default async function LibraryPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-heading text-3xl tracking-tight">Library</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Browse your collection.
-        </p>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title="Library"
+        description="Browse your collection."
+      />
 
       <AddSource />
 

@@ -1,6 +1,5 @@
-import { ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
 	Empty,
@@ -9,7 +8,6 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
-import { parseBlocks } from "@/lib/editor/blocks";
 import { extractNotes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
 import { getNotebook } from "@/lib/store/notebooks";
@@ -23,59 +21,29 @@ import { ReaderShell } from "./reader-shell";
 
 export const dynamic = "force-dynamic";
 
-/** Most ingested sources open with their own H1, so avoid printing it twice. */
-function documentLeadsWithTitle(markdown: string, title: string): boolean {
-	const [first] = parseBlocks(markdown);
-	return (
-		first?.kind === "heading" &&
-		first.level === 1 &&
-		first.span.text.trim().toLowerCase() === title.trim().toLowerCase()
-	);
-}
-
 function SourceHeader({
 	source,
 	detail,
-	showTitle,
 	notebook,
 }: {
 	source: SourceRow;
 	detail: string;
-	showTitle: boolean;
 	notebook: { id: string; name: string } | null;
 }) {
-	const chevron = <ChevronRight className="size-3.5 shrink-0" aria-hidden />;
 	return (
-		<header className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 lg:px-10 lg:py-5">
-			<p className="flex items-center gap-1 text-sm text-muted-foreground">
-				{notebook ? (
-					<>
-						<Link href="/notebooks" className="shrink-0 hover:underline">
-							Notebooks
-						</Link>
-						{chevron}
-						<Link
-							href={`/notebooks/${notebook.id}`}
-							className="truncate hover:underline"
-						>
-							{notebook.name}
-						</Link>
-					</>
-				) : (
-					<Link href="/library" className="shrink-0 hover:underline">
-						Library
-					</Link>
-				)}
-				{chevron}
-				<span className="truncate text-foreground">{source.title}</span>
-			</p>
-			{showTitle ? (
-				<h1 className="mt-1 line-clamp-2 font-heading text-xl tracking-tight sm:mt-2 sm:text-2xl lg:text-3xl">
-					{source.title}
-				</h1>
-			) : null}
-			<p className="mt-1 truncate text-xs text-muted-foreground">{detail}</p>
-		</header>
+		<PageHeader
+			className="mb-0 shrink-0 px-4 pt-6 pb-4 sm:px-6 lg:px-10"
+			breadcrumb={[
+				...(notebook
+					? [
+							{ label: "Notebooks", href: "/notebooks" },
+							{ label: notebook.name, href: `/notebooks/${notebook.id}` },
+						]
+					: [{ label: "Library", href: "/library" }]),
+				{ label: source.title },
+			]}
+			meta={detail}
+		/>
 	);
 }
 
@@ -169,10 +137,6 @@ export default async function ReadPage({
 		ready && source.kind === "pdf" && hasPdf && !source.markdown;
 	const markdownReader = ready && Boolean(source.markdown);
 
-	const showTitle =
-		source.kind === "pdf" ||
-		!source.markdown ||
-		!documentLeadsWithTitle(source.markdown, source.title);
 	const linkedNoteId = extractNotes.find(({ extract_id }) =>
 		rawExtracts.some(({ id: extractId }) => extractId === extract_id),
 	)?.note_id;
@@ -187,7 +151,6 @@ export default async function ReadPage({
 				<SourceHeader
 					source={source}
 					detail={detail}
-					showTitle={showTitle}
 					notebook={notebook}
 				/>
 				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -224,7 +187,6 @@ export default async function ReadPage({
 				<SourceHeader
 					source={source}
 					detail={detail}
-					showTitle={showTitle}
 					notebook={notebook}
 				/>
 

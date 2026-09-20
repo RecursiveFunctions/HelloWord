@@ -151,7 +151,7 @@ export function NotebookContents({
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{section.empty}</p>
             ) : view === "cards" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {rows.map((item) => (
                   <ItemCard
                     key={`${item.type}:${item.id}`}

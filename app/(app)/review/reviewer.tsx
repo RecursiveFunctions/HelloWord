@@ -464,7 +464,7 @@ function CardSession({
   }, [checked, card.prompt, grade, reveal]);
 
   return (
-    <Card>
+    <Card className="mx-auto w-full max-w-3xl">
       <CardHeader className="gap-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Badge variant="outline">{card.type.replace("_", " ")}</Badge>

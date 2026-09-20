@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { ClockPresets } from "@/components/clock-presets";
 import { ColorWheel } from "@/components/color-wheel";
@@ -11,16 +12,19 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-heading text-3xl tracking-tight">Settings</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          The clock preset is also on the{" "}
-          <Link href="/review" className="underline">
-            Review
-          </Link>{" "}
-          screen, where you can watch it take effect.
-        </p>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title="Settings"
+        description={
+          <>
+            The clock preset is also on the{" "}
+            <Link href="/review" className="underline">
+              Review
+            </Link>{" "}
+            screen, where you can watch it take effect.
+          </>
+        }
+      />
 
       <section>
         <ColorWheel />

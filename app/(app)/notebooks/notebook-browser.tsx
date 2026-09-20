@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { UploadCloud } from "lucide-react";
 import { Sparkline } from "@/components/sparkline";
@@ -49,22 +50,19 @@ export function NotebookBrowser({
 
   return (
     <div>
-      <header className="mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <h1 className="font-heading text-3xl tracking-tight">Notebooks</h1>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        className="mb-8"
+        title="Notebooks"
+        description="Saved collections of sources, notes, extracts, and activities. Nothing is owned by a notebook — membership is a join table, so one source can live in many places."
+        actions={
+          <>
             {items.length > 0 ? (
               <WorkspaceViewToggle view={view} onChange={choose} />
             ) : null}
             <NewNotebook />
-          </div>
-        </div>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Saved collections of sources, notes, extracts, and activities.
-          Nothing is owned by a notebook — membership is a join table, so one
-          source can live in many places.
-        </p>
-      </header>
+          </>
+        }
+      />
 
       {items.length === 0 ? (
         <Empty>
@@ -82,7 +80,7 @@ export function NotebookBrowser({
           ))}
         </ul>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {items.map((notebook) => (
             <NotebookCard key={notebook.id} notebook={notebook} />
           ))}
