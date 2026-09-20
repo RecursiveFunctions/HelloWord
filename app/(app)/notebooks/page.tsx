@@ -17,6 +17,7 @@ import {
 import { notebookSparkline } from "@/lib/seed";
 import { dueCounts } from "@/lib/fsrs/queue";
 import { listNotebooks } from "@/lib/store/notebooks";
+import { resolveNotebookColor } from "@/lib/themes";
 import { NewNotebook } from "./new-notebook";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export default async function NotebooksPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {notebooks.map((notebook) => {
             const due = byNotebook[notebook.id] ?? 0;
-            const color = notebook.color ?? "var(--color-primary)";
+            const color = resolveNotebookColor(notebook.color);
             const spark = notebookSparkline({
               ...notebook,
               description: notebook.description ?? "",

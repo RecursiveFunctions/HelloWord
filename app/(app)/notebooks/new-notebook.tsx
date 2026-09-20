@@ -16,23 +16,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { NOTEBOOK_COLORS } from "@/lib/themes";
 import { cn } from "@/lib/utils";
-
-const COLORS = [
-  "#c2410c",
-  "#1d4ed8",
-  "#15803d",
-  "#7e22ce",
-  "#b91c1c",
-  "#0f766e",
-];
 
 export function NewNotebook() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState(NOTEBOOK_COLORS[0].swatch);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,18 +105,18 @@ export function NewNotebook() {
             <div className="grid gap-1.5">
               <Label>Colour</Label>
               <div className="flex gap-2">
-                {COLORS.map((option) => (
+                {NOTEBOOK_COLORS.map((option) => (
                   <button
-                    key={option}
+                    key={option.id}
                     type="button"
-                    aria-label={`Use ${option}`}
-                    aria-pressed={color === option}
-                    onClick={() => setColor(option)}
+                    aria-label={option.label}
+                    aria-pressed={color === option.swatch}
+                    onClick={() => setColor(option.swatch)}
                     className={cn(
-                      "size-6 rounded-full ring-offset-2 ring-offset-background transition-shadow",
-                      color === option && "ring-2 ring-ring",
+                      "size-6 rounded-full shadow-[0_0_0_1px_rgba(0,0,0,0.12)] ring-offset-2 ring-offset-background transition-shadow",
+                      color === option.swatch && "ring-2 ring-ring",
                     )}
-                    style={{ background: option }}
+                    style={{ background: option.swatch }}
                   />
                 ))}
               </div>

@@ -2,6 +2,7 @@ import type { ActivityPayload } from "../contracts/activity";
 import type { SelectorBundle } from "../contracts/anchor";
 import { hashBody } from "../hash";
 import { normalizeMarkdown } from "../contracts/markdown";
+import { THEME_SWATCHES } from "../themes";
 import { ids, SEED_NOW } from "./ids";
 import { selectorFor } from "./selector";
 import { sourceMarkdown, sourceWordCounts } from "./sources";
@@ -112,14 +113,14 @@ export const notebooks: SeedNotebook[] = [
     id: ids.notebook.fsrs,
     name: "Spaced repetition",
     description: "FSRS, retention, and why we keep an A-factor beside the card rather than inside the model.",
-    color: "#c2410c",
+    color: THEME_SWATCHES.yellow,
     created_at: daysAgo(80),
   },
   {
     id: ids.notebook.ir,
     name: "Incremental reading",
     description: "Queues, extracts, notes, and the human edit between highlighting and being tested.",
-    color: "#1d4ed8",
+    color: THEME_SWATCHES.blue,
     created_at: daysAgo(70),
   },
 ];

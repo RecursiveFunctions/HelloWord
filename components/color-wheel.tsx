@@ -1,38 +1,21 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import {
+  DEFAULT_THEME,
+  THEME_IDS,
+  THEMES,
+  type ThemeId,
+} from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
 export const THEME_STORAGE_KEY = "helloword-theme";
-
-export const THEME_IDS = [
-  "pink",
-  "yellow",
-  "blue",
-  "green",
-  "white",
-  "black",
-] as const;
-
-export type ThemeId = (typeof THEME_IDS)[number];
-
-const THEMES: {
-  id: ThemeId;
-  label: string;
-  swatch: string;
-}[] = [
-  { id: "pink", label: "Pastel pink", swatch: "oklch(0.86 0.08 350)" },
-  { id: "yellow", label: "Pastel yellow", swatch: "oklch(0.92 0.1 95)" },
-  { id: "blue", label: "Pastel blue", swatch: "oklch(0.86 0.07 250)" },
-  { id: "green", label: "Pastel green", swatch: "oklch(0.88 0.08 150)" },
-  { id: "white", label: "White", swatch: "oklch(0.995 0 0)" },
-  { id: "black", label: "Black", swatch: "oklch(0.2 0 0)" },
-];
+export { DEFAULT_THEME, THEME_IDS, type ThemeId };
 
 const FAN_RADIUS_PX = 88;
 const FAN_ANGLES_DEG = [15, 30, 45, 60, 75, 90] as const;
 
-export const themeInitScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(${JSON.stringify(THEME_IDS)}.indexOf(t)!==-1){document.documentElement.dataset.theme=t;if(t==="black")document.documentElement.classList.add("dark")}}catch(e){}`;
+export const themeInitScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(${JSON.stringify(THEME_IDS)}.indexOf(t)===-1)t=${JSON.stringify(DEFAULT_THEME)};document.documentElement.dataset.theme=t;document.documentElement.classList.toggle("dark",t==="black")}catch(e){}`;
 
 function isThemeId(value: string | null): value is ThemeId {
   return THEME_IDS.includes(value as ThemeId);
@@ -47,13 +30,14 @@ export function ColorWheel() {
   const labelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState<ThemeId | null>(null);
+  const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
 
   useEffect(() => {
     const current = document.documentElement.dataset.theme;
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     if (isThemeId(current ?? null)) setTheme(current);
     else if (isThemeId(saved)) setTheme(saved);
+    else setTheme(DEFAULT_THEME);
   }, []);
 
   useEffect(() => {
@@ -148,7 +132,7 @@ export function ColorWheel() {
           className="pointer-events-auto relative z-10 size-11 rounded-full border-0 shadow-md outline-none transition-[scale,rotate,box-shadow] duration-300 ease-out hover:scale-110 hover:rotate-12 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
           style={{
             background:
-              "conic-gradient(from 210deg, oklch(0.86 0.08 350), oklch(0.92 0.1 95), oklch(0.88 0.08 150), oklch(0.86 0.07 250), oklch(0.985 0.005 95), oklch(0.55 0.02 260), oklch(0.86 0.08 350))",
+              "conic-gradient(from 210deg, oklch(0.995 0 0), oklch(0.86 0.08 350), oklch(0.92 0.1 95), oklch(0.88 0.08 150), oklch(0.86 0.07 250), oklch(0.2 0 0), oklch(0.995 0 0))",
           }}
         >
           <span
