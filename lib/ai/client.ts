@@ -1,7 +1,7 @@
 import type OpenAI from "openai";
 import { z } from "zod";
 import { AiProviderError, AiUnconfiguredError } from "./errors";
-import { parseJsonLoose } from "./json";
+import { answerText, parseJsonLoose } from "./json";
 import {
   type Provider,
   type ProviderId,
@@ -32,6 +32,13 @@ export type ChatJsonRequest = {
   reasoningEffort?: "low" | "high";
   /** Normalize a common provider shape before applying the authoritative schema. */
   normalize?: (value: unknown) => unknown;
+  /**
+   * Epoch ms after which no further model call may start. The hosting platform
+   * kills a route that overruns its `maxDuration` and answers the browser with
+   * a plain-text error page, so the retry ladder has to give up first and
+   * return a real JSON failure while it still can.
+   */
+  deadline?: number;
 };
 
 export type AiResult<T> = {
@@ -46,6 +53,18 @@ export type AiResult<T> = {
 /** Includes transport retries, guided downgrade, and one structured repair. */
 const CALL_BUDGET_PER_PROVIDER = 4;
 const MAX_TRANSPORT_RETRIES = 2;
+
+/**
+ * Default wall clock for the whole ladder. Under the 60s `maxDuration` the AI
+ * routes declare, with room left to load the note and serialize the answer.
+ */
+export const DEFAULT_BUDGET_MS = 45_000;
+/** Starting a call with less than this left only burns the remaining time. */
+export const MIN_CALL_MS = 6_000;
+
+export function defaultDeadline(): number {
+  return Date.now() + DEFAULT_BUDGET_MS;
+}
 
 const jsonSchemaCache = new WeakMap<z.ZodType, Record<string, unknown> | null>();
 
@@ -106,6 +125,7 @@ async function complete(
   req: ChatJsonRequest,
   guided: boolean,
   repair: Repair | undefined,
+  timeoutMs: number,
 ): Promise<Completion> {
   const body: Record<string, unknown> = {
     model: provider.model,
@@ -129,6 +149,7 @@ async function complete(
 
   const response = await provider.client.chat.completions.create(
     body as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
+    { timeout: timeoutMs },
   );
   const choice = response.choices[0];
   return {
@@ -137,9 +158,14 @@ async function complete(
   };
 }
 
+/**
+ * Scans the answer, not the raw response: a `<think>` trace is prose, and one
+ * stray brace in it used to make this report a cut-off answer as well formed,
+ * which sent the repair round trip the wrong instruction.
+ */
 export function looksTruncated(raw: string, finishReason: string | null): boolean {
   if (finishReason === "length") return true;
-  const trimmed = raw.trim();
+  const trimmed = answerText(raw);
   if (!trimmed) return false;
   if (/[,:[{]\s*$/.test(trimmed)) return true;
   const stack: string[] = [];
@@ -186,19 +212,30 @@ export async function chatJson<T>(
   const providers = chatProviders();
   if (providers.length === 0) throw new AiUnconfiguredError("chat");
 
+  const deadline = req.deadline ?? defaultDeadline();
   const failures: string[] = [];
+  let ranOutOfTime = false;
 
   for (const provider of providers) {
+    if (ranOutOfTime) break;
     let guided = supportsGuidedJson(provider.id);
     let repair: Repair | undefined;
     let attempts = 0;
     let transportRetries = 0;
 
     for (let call = 0; call < CALL_BUDGET_PER_PROVIDER; call++) {
+      const remaining = deadline - Date.now();
+      if (remaining < MIN_CALL_MS) {
+        failures.push(
+          `${provider.label}: ${req.name} ran out of time after ${attempts} attempt${attempts === 1 ? "" : "s"}`,
+        );
+        ranOutOfTime = true;
+        break;
+      }
       attempts++;
       let completion: Completion;
       try {
-        completion = await complete(provider, schema, req, guided, repair);
+        completion = await complete(provider, schema, req, guided, repair, remaining);
       } catch (error) {
         if (guided && looksLikeGuidedJsonRejection(error)) {
           markGuidedJsonUnsupported(provider.id);
@@ -206,7 +243,7 @@ export async function chatJson<T>(
           continue;
         }
         if (isTransientProviderError(error) && transportRetries < MAX_TRANSPORT_RETRIES) {
-          await sleep(retryDelayMs(error, transportRetries));
+          await sleep(Math.min(retryDelayMs(error, transportRetries), Math.max(0, deadline - Date.now())));
           transportRetries++;
           continue;
         }
@@ -242,7 +279,7 @@ export async function chatJson<T>(
       const truncated = looksTruncated(raw, finishReason);
       if (repair) {
         failures.push(
-          `${provider.label}: invalid ${req.name} after structured repair (${truncated ? "truncated output" : complaint})`,
+          `${provider.label}: invalid ${req.name} after structured repair (${truncated ? `output was cut off at the ${req.maxTokens}-token limit` : complaint})`,
         );
         break;
       }

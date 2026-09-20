@@ -5,7 +5,7 @@ import {
   type ActivityType,
 } from "../contracts";
 import { env } from "../env";
-import { chatJson } from "./client";
+import { MIN_CALL_MS, chatJson, defaultDeadline } from "./client";
 import type { AiNote } from "./data";
 import { AiProviderError } from "./errors";
 import { mockActivityBatch } from "./mock";
@@ -332,6 +332,11 @@ export async function generateActivities(
   let provider = "";
   let model = "";
 
+  // Both calls share one wall clock. Two independent ladders can each spend
+  // the full budget and overrun the route's maxDuration, at which point the
+  // platform replaces our JSON error with a plain-text page.
+  const deadline = defaultDeadline();
+
   const first = await chatJson(ActivityDraft, {
     name: "activity_batch",
     system: ACTIVITY_SYSTEM,
@@ -340,14 +345,16 @@ export async function generateActivities(
     reasoningEffort: "high",
     maxTokens: 3_000,
     temperature: 0.5,
+    deadline,
     user: requestFor(note, types, target, []),
   });
   provider = first.provider;
   model = first.model;
   kept.push(...repairBatch(first.value.activities, types, seen));
 
-  // One top-up call, only if repairs cost us questions the caller asked for.
-  if (kept.length < target) {
+  // One top-up call, only if repairs cost us questions the caller asked for
+  // and there is still time to make it.
+  if (kept.length < target && Date.now() < deadline - MIN_CALL_MS) {
     try {
       const topUp = await chatJson(ActivityDraft, {
         name: "activity_batch",
@@ -356,6 +363,7 @@ export async function generateActivities(
         reasoningEffort: "high",
         maxTokens: 3_000,
         temperature: 0.6,
+        deadline,
         user: requestFor(note, types, target - kept.length, [...seen]),
       });
       provider = topUp.provider;
