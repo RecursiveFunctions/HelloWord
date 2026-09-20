@@ -57,10 +57,74 @@ export function balancedJsonSlice(text: string): string | null {
   return null;
 }
 
+/**
+ * Close a JSON document that the model ran out of tokens mid-way through.
+ *
+ * Only ever drops. It rewinds to the last element boundary of the *outermost*
+ * unfinished container and appends the closers still open there, so a batch cut
+ * off inside its ninth proposal comes back as eight whole proposals rather than
+ * eight plus a fragment the schema would reject on the fragment's behalf.
+ *
+ * Returns null when nothing finished, when the braces do not match, or when the
+ * document was never truncated in the first place.
+ */
+export function closeTruncatedJson(text: string): string | null {
+  const start = text.search(/[[{]/);
+  if (start < 0) return null;
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+  // text.slice(start, safeEnd) is a run of finished elements inside safeStack.
+  // Shallower boundaries win, because a deeper one sits inside the element that
+  // got cut off and would keep half of it.
+  let safeEnd = -1;
+  let safeStack: string[] = [];
+  let safeDepth = Number.POSITIVE_INFINITY;
+
+  const mark = (end: number) => {
+    if (stack.length > safeDepth) return;
+    safeDepth = stack.length;
+    safeEnd = end;
+    safeStack = [...stack];
+  };
+
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+    } else if (char === "{" || char === "[") {
+      stack.push(char === "{" ? "}" : "]");
+    } else if (char === "}" || char === "]") {
+      if (stack.pop() !== char) return null;
+      // A document that closes its own outermost container is not truncated.
+      if (stack.length === 0) return null;
+      mark(i + 1);
+    } else if (char === ",") {
+      // Everything up to the separator is a finished element.
+      mark(i);
+    }
+  }
+
+  if (stack.length === 0 || safeEnd < 0) return null;
+  return text.slice(start, safeEnd) + safeStack.reverse().join("");
+}
+
+/** The answer with reasoning traces and code fences removed. */
+export function answerText(raw: string): string {
+  return stripFences(stripReasoning(raw)).trim();
+}
+
 export function parseJsonLoose(raw: string): LooseJson {
-  const text = stripFences(stripReasoning(raw)).trim();
+  const text = answerText(raw);
   if (!text) return { ok: false, reason: "response was empty after stripping reasoning" };
-  const candidates = [text, balancedJsonSlice(text)];
+  // Salvage is last: it only runs once strict parsing has already failed.
+  const candidates = [text, balancedJsonSlice(text), closeTruncatedJson(text)];
   for (const candidate of candidates) {
     if (!candidate) continue;
     try {

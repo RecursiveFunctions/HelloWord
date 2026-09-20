@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { buildSelector, isAnchorableRange, resolveExact } from "@/lib/anchor/selector";
+import { readJson } from "@/lib/client/json";
 import type { ExtractProposal, SelectorBundle } from "@/lib/contracts";
 import type { ActivityPayload } from "@/lib/contracts/activity";
 import type { ExtractRow, NoteRow } from "@/lib/store/types";
+import { NoteEditor } from "./note-editor";
 import { SourcePane, type PaintedExtract } from "./source-pane";
 
 type ResolvedProposal = ExtractProposal & {
@@ -87,11 +88,11 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
         suggested_by: "human",
       }),
     });
-    const body = (await response.json()) as {
+    const body = await readJson<{
       extract?: ExtractRow;
       duplicate?: boolean;
       error?: string;
-    };
+    }>(response, "Could not create extract.");
     if (!response.ok || !body.extract) throw new Error(body.error || "Could not create extract.");
     setExtracts((current) =>
       current.some(({ id }) => id === body.extract!.id) ? current : [...current, body.extract!],
@@ -126,7 +127,10 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ extract_id: parent.id, start, end }),
       });
-      const body = (await response.json()) as { duplicate?: boolean; error?: string };
+      const body = await readJson<{ duplicate?: boolean; error?: string }>(
+        response,
+        "Could not create cloze.",
+      );
       if (!response.ok) throw new Error(body.error || "Could not create cloze.");
       setManualStatus(body.duplicate ? "That cloze already exists." : "Cloze added to review.");
     } catch (error) {
@@ -158,7 +162,10 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ sourceId: source.id }),
       });
-      const body = (await response.json()) as ExtractProposal[] | { error?: string; detail?: string };
+      const body = await readJson<ExtractProposal[] | { error?: string; detail?: string }>(
+        response,
+        "Could not generate proposals.",
+      );
       if (!response.ok || !Array.isArray(body)) {
         throw new Error(!Array.isArray(body) ? body.detail || body.error : "Proposal request failed.");
       }
@@ -213,11 +220,11 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
           concepts: proposal.concepts,
         }),
       });
-      const body = (await response.json()) as {
+      const body = await readJson<{
         extract?: ExtractRow;
         duplicate?: boolean;
         error?: string;
-      };
+      }>(response, "Could not save extract.");
       if (!response.ok || !body.extract) throw new Error(body.error || "Could not save extract.");
       setExtracts((current) =>
         current.some((extract) => extract.id === body.extract!.id)
@@ -277,7 +284,7 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: noteTitle, body_md: noteBody }),
       });
-      const body = (await response.json()) as NoteRow | { error?: string };
+      const body = await readJson<NoteRow | { error?: string }>(response, "Could not save note.");
       if (!response.ok || !("id" in body)) {
         throw new Error("error" in body ? body.error : "Could not save note.");
       }
@@ -316,11 +323,11 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
           count: 4,
         }),
       });
-      const body = (await response.json()) as {
+      const body = await readJson<{
         activities?: ActivityPayload[];
         error?: string;
         detail?: string;
-      };
+      }>(response, "Could not generate activities.");
       if (!response.ok || !body.activities) {
         throw new Error(body.detail || body.error || "Could not generate activities.");
       }
@@ -359,7 +366,10 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
           activities: chosen,
         }),
       });
-      const body = (await response.json()) as { activities?: unknown[]; error?: string };
+      const body = await readJson<{ activities?: unknown[]; error?: string }>(
+        response,
+        "Could not accept activities.",
+      );
       if (!response.ok || !body.activities) {
         throw new Error(body.error || "Could not accept activities.");
       }
@@ -456,12 +466,9 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
               value={noteTitle}
               onChange={(event) => setNoteTitle(event.target.value)}
             />
-            <Textarea
-              className="mt-3 min-h-44 font-mono text-xs"
-              aria-label="Note markdown"
-              value={noteBody}
-              onChange={(event) => setNoteBody(event.target.value)}
-            />
+            <div className="mt-3">
+              <NoteEditor body={noteBody} onBodyChange={setNoteBody} disabled={savingNote} />
+            </div>
             {noteStatus && <p className="mt-2 text-xs text-muted-foreground">{noteStatus}</p>}
             <div className="mt-5 flex items-center justify-between gap-3">
               <div>
