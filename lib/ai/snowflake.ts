@@ -165,7 +165,7 @@ export async function weeklyReport(stats: ConceptStat[]): Promise<ReportResult> 
     const result = await chatJson(Diagnostics, {
       name: "weekly_report",
       system: REPORT_SYSTEM,
-      reasoningEffort: "high",
+      reasoningMode: "high",
       maxTokens: MAX_COMPLETION_TOKENS,
       temperature: 0.2,
       user,

@@ -28,8 +28,9 @@ export type ChatJsonRequest = {
   user: string;
   maxTokens: number;
   temperature?: number;
-  /** PLAN.md: "low" for extract candidates, "high" for drafting and generation. */
-  reasoningEffort?: "low" | "high";
+  topP?: number;
+  /** Native Nemotron thinking mode. Ignored by providers without this capability. */
+  reasoningMode?: "disabled" | "low" | "medium" | "high";
   /** Normalize a common provider shape before applying the authoritative schema. */
   normalize?: (value: unknown) => unknown;
   /**
@@ -41,6 +42,26 @@ export type ChatJsonRequest = {
   deadline?: number;
 };
 
+export type AiUsage = {
+  promptTokens?: number;
+  completionTokens?: number;
+  reasoningTokens?: number;
+  totalTokens?: number;
+};
+
+export type AiTelemetry = {
+  provider: ProviderId;
+  model: string;
+  attempts: number;
+  latencyMs: number;
+  guidedJson: boolean;
+  guidedJsonDowngraded: boolean;
+  repaired: boolean;
+  finishReason?: string | null;
+  usage?: AiUsage;
+  errorCategory?: string;
+};
+
 export type AiResult<T> = {
   value: T;
   provider: ProviderId;
@@ -48,6 +69,7 @@ export type AiResult<T> = {
   /** Model calls spent, including guided-output downgrades and repair retries. */
   attempts: number;
   guidedJson: boolean;
+  telemetry: AiTelemetry;
 };
 
 /** Includes transport retries, guided downgrade, and one structured repair. */
@@ -117,7 +139,61 @@ function buildMessages(
   return messages;
 }
 
-type Completion = { raw: string; finishReason: string | null };
+type Completion = {
+  raw: string;
+  finishReason: string | null;
+  usage?: AiUsage;
+};
+
+const THINKING_BUDGET = { low: 256, medium: 1024, high: 4096 } as const;
+
+function thinkingControls(
+  mode: ChatJsonRequest["reasoningMode"],
+): { enable_thinking: boolean; thinking_budget?: number } | undefined {
+  if (!mode) return undefined;
+  if (mode === "disabled") return { enable_thinking: false };
+  return { enable_thinking: true, thinking_budget: THINKING_BUDGET[mode] };
+}
+
+export function buildChatBody(
+  provider: Pick<Provider, "model" | "maxTokensParam" | "supportsNemotronReasoning">,
+  req: ChatJsonRequest,
+  schema: z.ZodType,
+  guided: boolean,
+  repair?: Repair,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model: provider.model,
+    messages: buildMessages(req, repair),
+    temperature: req.temperature ?? 0.2,
+    [provider.maxTokensParam]: req.maxTokens,
+  };
+  if (req.topP !== undefined) body.top_p = req.topP;
+  const chatTemplateKwargs = thinkingControls(req.reasoningMode);
+  if (provider.supportsNemotronReasoning && chatTemplateKwargs) {
+    body.chat_template_kwargs = chatTemplateKwargs;
+  }
+  if (guided) {
+    const jsonSchema = jsonSchemaFor(schema);
+    if (jsonSchema) {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: { name: req.name, schema: jsonSchema, strict: true },
+      };
+      body.nvext = { guided_json: jsonSchema };
+    }
+  }
+  return body;
+}
+
+function categoryOf(error: unknown): string {
+  const description = describeError(error);
+  if (/HTTP 401|HTTP 403/.test(description)) return "authentication";
+  if (/HTTP 429/.test(description)) return "rate_limit";
+  if (/HTTP 5\d\d/.test(description)) return "provider_server";
+  if (looksLikeGuidedJsonRejection(error)) return "guided_json_rejected";
+  return isTransientProviderError(error) ? "transport" : "provider_error";
+}
 
 async function complete(
   provider: Provider,
@@ -127,25 +203,7 @@ async function complete(
   repair: Repair | undefined,
   timeoutMs: number,
 ): Promise<Completion> {
-  const body: Record<string, unknown> = {
-    model: provider.model,
-    messages: buildMessages(req, repair),
-    temperature: req.temperature ?? 0.2,
-    [provider.maxTokensParam]: req.maxTokens,
-  };
-  if (req.reasoningEffort) body.reasoning_effort = req.reasoningEffort;
-
-  if (guided) {
-    const jsonSchema = jsonSchemaFor(schema);
-    if (jsonSchema) {
-      body.response_format = {
-        type: "json_schema",
-        json_schema: { name: req.name, schema: jsonSchema, strict: true },
-      };
-      // NVIDIA NIM's own spelling of the same request.
-      body.nvext = { guided_json: jsonSchema };
-    }
-  }
+  const body = buildChatBody(provider, req, schema, guided, repair);
 
   const response = await provider.client.chat.completions.create(
     body as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
@@ -155,6 +213,15 @@ async function complete(
   return {
     raw: choice?.message?.content ?? "",
     finishReason: choice?.finish_reason ?? null,
+    usage: response.usage
+      ? {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          reasoningTokens:
+            response.usage.completion_tokens_details?.reasoning_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined,
   };
 }
 
@@ -215,6 +282,7 @@ export async function chatJson<T>(
   const deadline = req.deadline ?? defaultDeadline();
   const failures: string[] = [];
   let ranOutOfTime = false;
+  const startedAt = Date.now()
 
   for (const provider of providers) {
     if (ranOutOfTime) break;
@@ -222,6 +290,7 @@ export async function chatJson<T>(
     let repair: Repair | undefined;
     let attempts = 0;
     let transportRetries = 0;
+    let guidedJsonDowngraded = false;
 
     for (let call = 0; call < CALL_BUDGET_PER_PROVIDER; call++) {
       const remaining = deadline - Date.now();
@@ -240,6 +309,7 @@ export async function chatJson<T>(
         if (guided && looksLikeGuidedJsonRejection(error)) {
           markGuidedJsonUnsupported(provider.id);
           guided = false;
+          guidedJsonDowngraded = true;
           continue;
         }
         if (isTransientProviderError(error) && transportRetries < MAX_TRANSPORT_RETRIES) {
@@ -248,7 +318,18 @@ export async function chatJson<T>(
           continue;
         }
         if (isFailoverWorthy(error)) {
-          failures.push(`${provider.label}: ${describeError(error)}`);
+          const errorCategory = categoryOf(error);
+          failures.push(`${provider.label}: ${errorCategory}`);
+          console.info("[ai] completion", {
+            provider: provider.id,
+            model: provider.model,
+            attempts,
+            latencyMs: Date.now() - startedAt,
+            guidedJson: guided,
+            guidedJsonDowngraded,
+            repaired: Boolean(repair),
+            errorCategory,
+          } satisfies AiTelemetry);
           break;
         }
         throw error;
@@ -263,12 +344,25 @@ export async function chatJson<T>(
           req.normalize ? req.normalize(loose.value) : loose.value,
         );
         if (parsed.success) {
+          const telemetry: AiTelemetry = {
+            provider: provider.id,
+            model: provider.model,
+            attempts,
+            latencyMs: Date.now() - startedAt,
+            guidedJson: guided,
+            guidedJsonDowngraded,
+            repaired: Boolean(repair),
+            finishReason,
+            usage: completion.usage,
+          };
+          console.info("[ai] completion", telemetry);
           return {
             value: parsed.data,
             provider: provider.id,
             model: provider.model,
             attempts,
             guidedJson: guided,
+            telemetry,
           };
         }
         complaint = formatIssues(parsed.error);

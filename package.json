@@ -13,7 +13,8 @@
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
     "db:generate-seed": "tsx scripts/generate-seed.ts",
     "smoke": "tsx scripts/smoke-sponsors.ts",
-    "smoke:ai": "tsx scripts/ai-smoke.ts"
+    "smoke:ai": "tsx scripts/ai-smoke.ts",
+    "benchmark:nemotron": "tsx scripts/benchmark-nemotron.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

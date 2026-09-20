@@ -34,7 +34,7 @@ loadEnvFile(".env");
 type Result = { name: string; ok: boolean; detail: string };
 
 const NVIDIA_MODEL =
-  process.env.NVIDIA_MODEL ?? "nvidia/nemotron-3-super-120b-a12b";
+  process.env.NVIDIA_MODEL ?? "nvidia/nemotron-3-nano-30b-a3b";
 const DO_MODEL = process.env.DO_NEMOTRON_MODEL ?? "nemotron-3-nano-30b";
 const SNOWFLAKE_MODEL = process.env.SNOWFLAKE_MODEL ?? "claude-sonnet-4-5";
 

@@ -72,7 +72,8 @@ follows. Redeploy after changing a value.
 | `AI_MOCK` | `1` | `0` |
 | `DATABASE_URL` | Unset (committed fixtures) | Tiger Cloud connection string |
 | `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET`, `SPACES_ENDPOINT` | Unset unless testing uploads | Required for PDF uploads |
-| `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL` | Unset | Live provider settings |
+| `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL` | Unset | Brev-hosted Nemotron NIM chat settings |
+| `NVIDIA_EMBED_API_KEY`, `NVIDIA_EMBED_BASE_URL`, `NVIDIA_EMBED_MODEL` | Unset | Separate NVIDIA embedding settings |
 | `DO_INFERENCE_KEY`, `DO_INFERENCE_BASE_URL`, `DO_NEMOTRON_MODEL` | Unset | Live failover settings |
 | `GEMINI_API_KEY` | Unset | Live PDF/URL fallback |
 | `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_PAT`, `SNOWFLAKE_MODEL` | Unset | Live report provider |
@@ -81,6 +82,14 @@ follows. Redeploy after changing a value.
 Do not add Production database or provider secrets to Preview scope. Preview
 APIs are write-capable and must not be able to mutate the Production database.
 All values are server-only; none should use a `NEXT_PUBLIC_` prefix.
+
+Production chat is expected to use Nemotron 3 Nano 30B-A3B served by NVIDIA
+NIM on a Brev GPU. Calls to NVIDIA API Catalog (`integrate.api.nvidia.com`)
+are development/diagnostic traffic and do not consume Brev credits. Follow
+[docs/nemotron-brev-nim.md](docs/nemotron-brev-nim.md) to provision the NIM,
+secure its ingress, verify the exact served model ID, and configure Vercel.
+Chat and embedding URLs are deliberately independent because the Nano chat NIM
+does not serve the embedding model.
 
 ### PDF storage and Spaces CORS
 

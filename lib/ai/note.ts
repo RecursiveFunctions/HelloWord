@@ -74,8 +74,8 @@ export async function draftNote(extracts: AiExtract[]): Promise<DraftResult> {
   const result = await chatJson(NoteDraftDraft, {
     name: "note_draft",
     system: NOTE_SYSTEM,
-    // reasoning_effort high: this is composition, and the output is the artifact.
-    reasoningEffort: "high",
+    // Composition gets a bounded, deeper thinking budget.
+    reasoningMode: "high",
     maxTokens: 1_600,
     temperature: 0.4,
     user: `Passages the reader kept:\n\n${passages}`,

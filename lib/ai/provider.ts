@@ -19,21 +19,12 @@ export type Provider = {
   model: string;
   /** DigitalOcean serverless inference rejects `max_tokens`. */
   maxTokensParam: "max_tokens" | "max_completion_tokens";
+  /** NVIDIA Nemotron NIM accepts native chat-template thinking controls. */
+  supportsNemotronReasoning: boolean;
   client: OpenAI;
 };
 
 const TIMEOUT_MS = 45_000;
-
-/**
- * Not in lib/env.ts because that file is frozen shared surface. Read at call
- * time so a script that loads .env.local after import still sees it.
- */
-function embedModel(): string {
-  const configured = process.env.NVIDIA_EMBED_MODEL;
-  return configured && configured.length > 0
-    ? configured
-    : "nvidia/nemotron-3-embed-1b";
-}
 
 /** Longest delay we will sit through before moving to the next provider. */
 export const MAX_RETRY_DELAY_MS = 2_000;
@@ -70,6 +61,7 @@ export function chatProviders(): Provider[] {
       baseUrl: env.nvidia.baseUrl,
       model: env.nvidia.model,
       maxTokensParam: "max_tokens",
+      supportsNemotronReasoning: true,
       client: clientFor(env.nvidia.baseUrl, env.nvidia.apiKey),
     });
   }
@@ -80,6 +72,7 @@ export function chatProviders(): Provider[] {
       baseUrl: env.digitalOcean.baseUrl,
       model: env.digitalOcean.model,
       maxTokensParam: "max_completion_tokens",
+      supportsNemotronReasoning: false,
       client: clientFor(env.digitalOcean.baseUrl, env.digitalOcean.apiKey),
     });
   }
@@ -92,14 +85,15 @@ export function chatProviders(): Provider[] {
  * `vector(768)` column would corrupt cosine distance silently.
  */
 export function embeddingProvider(): Provider | null {
-  if (!env.nvidia.apiKey) return null;
+  if (!env.nvidia.embeddingApiKey) return null;
   return {
     id: "nvidia",
     label: "NVIDIA",
-    baseUrl: env.nvidia.baseUrl,
-    model: embedModel(),
+    baseUrl: env.nvidia.embeddingBaseUrl,
+    model: env.nvidia.embeddingModel,
     maxTokensParam: "max_tokens",
-    client: clientFor(env.nvidia.baseUrl, env.nvidia.apiKey),
+    supportsNemotronReasoning: false,
+    client: clientFor(env.nvidia.embeddingBaseUrl, env.nvidia.embeddingApiKey),
   };
 }
 

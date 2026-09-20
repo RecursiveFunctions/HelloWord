@@ -16,7 +16,12 @@ export const env = {
   nvidia: {
     apiKey: read("NVIDIA_API_KEY"),
     baseUrl: read("NVIDIA_BASE_URL") ?? "https://integrate.api.nvidia.com/v1",
-    model: read("NVIDIA_MODEL") ?? "nvidia/nemotron-3-super-120b-a12b",
+    model: read("NVIDIA_MODEL") ?? "nvidia/nemotron-3-nano-30b-a3b",
+    embeddingApiKey: read("NVIDIA_EMBED_API_KEY") ?? read("NVIDIA_API_KEY"),
+    embeddingBaseUrl:
+      read("NVIDIA_EMBED_BASE_URL") ?? "https://integrate.api.nvidia.com/v1",
+    embeddingModel:
+      read("NVIDIA_EMBED_MODEL") ?? "nvidia/nemotron-3-embed-1b",
   },
   digitalOcean: {
     apiKey: read("DO_INFERENCE_KEY"),

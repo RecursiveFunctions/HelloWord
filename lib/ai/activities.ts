@@ -341,8 +341,8 @@ export async function generateActivities(
     name: "activity_batch",
     system: ACTIVITY_SYSTEM,
     normalize: normalizeActivityBatch,
-    // reasoning_effort high: an answer key is not a creative writing exercise.
-    reasoningEffort: "high",
+    // An answer key benefits from a bounded, deeper thinking budget.
+    reasoningMode: "high",
     maxTokens: 3_000,
     temperature: 0.5,
     deadline,
@@ -360,7 +360,7 @@ export async function generateActivities(
         name: "activity_batch",
         system: ACTIVITY_SYSTEM,
         normalize: normalizeActivityBatch,
-        reasoningEffort: "high",
+        reasoningMode: "high",
         maxTokens: 3_000,
         temperature: 0.6,
         deadline,

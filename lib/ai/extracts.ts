@@ -95,7 +95,23 @@ export type ProposeResult = {
   model: string;
 };
 
-export async function proposeExtracts(source: AiSource): Promise<ProposeResult> {
+export type ExtractExperimentProfile = {
+  reasoningMode: "disabled" | "low" | "medium" | "high";
+  maxTokens: number;
+  temperature: number;
+  topP?: number;
+};
+
+const PRODUCTION_PROFILE: ExtractExperimentProfile = {
+  reasoningMode: "low",
+  maxTokens: 4_000,
+  temperature: 0.2,
+};
+
+export async function proposeExtracts(
+  source: AiSource,
+  profile: ExtractExperimentProfile = PRODUCTION_PROFILE,
+): Promise<ProposeResult> {
   if (env.aiMock) {
     return {
       proposals: mockExtractProposals(source),
@@ -109,14 +125,13 @@ export async function proposeExtracts(source: AiSource): Promise<ProposeResult> 
   const result = await chatJson(ProposalDraft, {
     name: "extract_proposals",
     system: EXTRACT_SYSTEM,
-    // reasoning_effort low: this is selection, not composition.
-    reasoningEffort: "low",
-    // Nemotron may spend part of this budget reasoning before emitting JSON,
-    // and the trace counts against the same ceiling as the answer. 4k left
-    // long sources being cut off mid-passage often enough to be the common
-    // failure; 6k covers the trace plus 8 verbatim passages and their notes.
-    maxTokens: 6_000,
-    temperature: 0.2,
+    // Selection benefits from a small, bounded thinking budget.
+    reasoningMode: profile.reasoningMode,
+    // Nemotron may spend part of this budget reasoning before emitting JSON.
+    // Keep enough room for 8 verbatim passages and their short annotations.
+    maxTokens: profile.maxTokens,
+    temperature: profile.temperature,
+    topP: profile.topP,
     user: `Title: ${source.title}
 ${truncated ? "Excerpt (the document continues past this point):" : "Full text:"}
 
