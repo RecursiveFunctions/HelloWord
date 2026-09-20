@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Sparkline } from "@/components/sparkline";
 import { diagnosticsForNotebook } from "@/lib/diagnostics/notebook";
 import { hashBody } from "@/lib/hash";
-import { listExtracts } from "@/lib/store/extracts";
+import { getExtract } from "@/lib/store/extracts";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
 import { getNote } from "@/lib/store/notes";
 import { itemPreviewSrc } from "@/lib/store/previews";
@@ -145,7 +145,7 @@ async function resolve(
       };
     }
     case "extract": {
-      const extract = (await listExtracts()).find((row) => row.id === itemId);
+      const extract = await getExtract(itemId);
       if (!extract) return null;
       return {
         ...extractItem(extract),

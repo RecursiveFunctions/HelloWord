@@ -1,6 +1,6 @@
 import { hashBody } from "@/lib/hash";
 import { activityPreview, paperPreview } from "./note-cover";
-import { listExtracts } from "./extracts";
+import { getExtract } from "./extracts";
 import { firstNoteId, listNotebookItems } from "./notebooks";
 import { getNote } from "./notes";
 import { getActivity } from "./review";
@@ -106,7 +106,7 @@ export async function liveItemPreview(type: PreviewType, id: string) {
       });
     }
     case "extract": {
-      const extract = (await listExtracts()).find((row) => row.id === id);
+      const extract = await getExtract(id);
       if (!extract) return null;
       return paperPreview({
         kicker: "Extract",

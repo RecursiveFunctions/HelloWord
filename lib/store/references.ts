@@ -1,5 +1,5 @@
 import { dbConfigured, query } from "@/lib/db";
-import { listExtracts } from "./extracts";
+import { getExtract } from "./extracts";
 import { getNote } from "./notes";
 import { getActivity } from "./review";
 import { getSource } from "./sources";
@@ -40,7 +40,7 @@ export async function referenceExists(
     case "note":
       return (await getNote(itemId)) !== null;
     case "extract":
-      return (await listExtracts()).some((extract) => extract.id === itemId);
+      return (await getExtract(itemId)) !== null;
     case "activity":
       return (await getActivity(itemId)) !== null;
   }
