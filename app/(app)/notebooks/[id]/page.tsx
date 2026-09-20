@@ -18,6 +18,7 @@ import {
   noteById,
 } from "@/lib/seed";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
+import { resolveNotebookColor } from "@/lib/themes";
 import { getSource } from "@/lib/store/sources";
 import {
   activityItem,
@@ -47,7 +48,7 @@ export default async function NotebookDetailPage({
   const diag = scopeToNotebook(diagnosticsForNotebook(id), membership);
   const hasDiagnostics =
     diag.struggling.length + diag.known.length + diag.untouched.length > 0;
-  const color = notebook.color ?? "var(--color-primary)";
+  const color = resolveNotebookColor(notebook.color);
 
   return (
     <div className="space-y-8">

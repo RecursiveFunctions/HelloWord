@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
+import Script from "next/script";
+import { ColorWheel, themeInitScript } from "@/components/color-wheel";
 import { OfflineBanner, RegisterServiceWorker } from "@/components/pwa";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "HelloWord",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   icons: {
     icon: "/icons/192",
@@ -36,7 +38,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0a09",
+  themeColor: "#fcfcfd",
   // An installed PWA should not bounce the whole page when a pane scrolls.
   viewportFit: "cover",
 };
@@ -45,11 +47,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="white"
+      suppressHydrationWarning
       className={`${sans.variable} ${mono.variable} ${serif.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <Script id="helloword-theme" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
         <OfflineBanner />
         <TooltipProvider>{children}</TooltipProvider>
+        <ColorWheel />
         <RegisterServiceWorker />
       </body>
     </html>

@@ -6,8 +6,8 @@ insert into scheduler_profile (id, name, request_retention, maximum_interval, le
 );
 
 insert into notebook (id, name, description, color, created_at) values
-  ('11111111-1111-4111-8111-111111111001', 'Spaced repetition', 'FSRS, retention, and why we keep an A-factor beside the card rather than inside the model.', '#c2410c', '2026-07-01T16:00:00.000Z'::timestamptz),
-  ('11111111-1111-4111-8111-111111111002', 'Incremental reading', 'Queues, extracts, notes, and the human edit between highlighting and being tested.', '#1d4ed8', '2026-07-11T16:00:00.000Z'::timestamptz);
+  ('11111111-1111-4111-8111-111111111001', 'Spaced repetition', 'FSRS, retention, and why we keep an A-factor beside the card rather than inside the model.', 'oklch(0.92 0.1 95)', '2026-07-01T16:00:00.000Z'::timestamptz),
+  ('11111111-1111-4111-8111-111111111002', 'Incremental reading', 'Queues, extracts, notes, and the human edit between highlighting and being tested.', 'oklch(0.86 0.07 250)', '2026-07-11T16:00:00.000Z'::timestamptz);
 
 insert into source (id, kind, title, origin_uri, storage_key, markdown, ingest_status, ingest_method, word_count, created_at) values
   ('22222222-2222-4222-8222-222222222001', 'pdf', 'FSRS without an A-factor', 'spaces://helloword-seed/fsrs-without-a-factor.pdf', 'seed/fsrs-without-a-factor.pdf', '# FSRS without an A-factor
