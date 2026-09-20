@@ -26,6 +26,16 @@ function hydrate(row: Record<string, unknown>): ExtractRow {
   };
 }
 
+export async function listExtracts(): Promise<ExtractRow[]> {
+  if (dbConfigured()) {
+    const rows = await query(
+      `select ${COLUMNS} from extract where accepted order by created_at desc`,
+    );
+    return rows.map(hydrate);
+  }
+  return memory().extracts.filter((extract) => extract.accepted);
+}
+
 export async function listSourceExtracts(sourceId: string): Promise<ExtractRow[]> {
   if (dbConfigured()) {
     const rows = await query(
