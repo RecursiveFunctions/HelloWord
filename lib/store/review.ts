@@ -6,7 +6,8 @@
  * `DATABASE_URL` is set, an in-memory copy of the seed otherwise, so the review
  * page is demonstrable before Tiger Cloud is wired up.
  */
-import { dbConfigured, query } from "@/lib/db";
+import { randomUUID } from "node:crypto";
+import { dbConfigured, pool, query } from "@/lib/db";
 import type { ActivityPayload } from "@/lib/contracts/activity";
 import { memory } from "./memory";
 import {
@@ -61,6 +62,50 @@ export async function listActivities(): Promise<ActivityRow[]> {
     return rows.map(hydrateActivity);
   }
   return memory().activities;
+}
+
+export async function createActivities(
+  noteId: string,
+  sourceBodyHash: string,
+  payloads: ActivityPayload[],
+): Promise<ActivityRow[]> {
+  if (payloads.length === 0) return [];
+  if (dbConfigured() && pool) {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const created: ActivityRow[] = [];
+      for (const payload of payloads) {
+        const result = await client.query(
+          `insert into activity (note_id, type, payload, source_body_hash)
+           values ($1, $2, $3::jsonb, $4)
+           returning ${ACTIVITY_COLUMNS}`,
+          [noteId, payload.type, JSON.stringify(payload), sourceBodyHash],
+        );
+        created.push(hydrateActivity(result.rows[0]));
+      }
+      await client.query("commit");
+      return created;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  const createdAt = new Date().toISOString();
+  const created = payloads.map((payload): ActivityRow => ({
+    id: randomUUID(),
+    note_id: noteId,
+    type: payload.type,
+    payload,
+    source_body_hash: sourceBodyHash,
+    variant_of: null,
+    created_at: createdAt,
+  }));
+  memory().activities.push(...created);
+  return created;
 }
 
 export async function getActivity(id: string): Promise<ActivityRow | null> {
