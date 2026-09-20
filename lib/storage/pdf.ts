@@ -5,7 +5,9 @@
  * it streams the archived bytes so `/read/[id]` can show real pages. Markdown
  * remains the input for extracts and notes; this helper is only the archive.
  *
- * Spaces wins when configured. Otherwise the file lands under `data/pdfs/`.
+ * Spaces wins when configured. Local development can fall back to
+ * `data/pdfs/`, but Vercel must use durable object storage because its
+ * function filesystem is ephemeral.
  */
 import {
   isLocalPdfKey,
@@ -27,6 +29,18 @@ export type StoredPdf = {
   origin_uri: string;
 };
 
+function requiresDurableStorage(): boolean {
+  return process.env.VERCEL === "1" || process.env.VERCEL === "true";
+}
+
+function durableStorageError(cause?: unknown): Error {
+  const error = new Error(
+    "PDF uploads on Vercel require DigitalOcean Spaces. Configure the DO_SPACES_* environment variables and redeploy.",
+  );
+  if (cause !== undefined) error.cause = cause;
+  return error;
+}
+
 export async function persistPdf(
   filename: string,
   bytes: Uint8Array,
@@ -37,9 +51,12 @@ export async function persistPdf(
       await putPdf(key, bytes);
       return { storage_key: key, origin_uri: spacesUri(key) };
     } catch (error) {
+      if (requiresDurableStorage()) throw durableStorageError(error);
       console.error("Spaces upload failed; storing PDF on disk instead", error);
     }
   }
+
+  if (requiresDurableStorage()) throw durableStorageError();
 
   const localKey = `local:${key}`;
   await writeLocalPdf(localKey, bytes);
