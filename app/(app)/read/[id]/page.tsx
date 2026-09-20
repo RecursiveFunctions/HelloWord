@@ -175,11 +175,12 @@ export default async function ReadPage({
 						}}
 						initialExtracts={rawExtracts}
 						initialNote={note}
-						pdfFileUrl={
-							source.kind === "pdf" && hasPdf
-								? `/api/sources/${source.id}/file`
-								: undefined
-						}
+pdfFileUrl={
+								source.kind === "pdf" && hasPdf
+									? `/api/sources/${source.id}/file`
+									: undefined
+							}
+
 					/>
 				</div>
 			</div>

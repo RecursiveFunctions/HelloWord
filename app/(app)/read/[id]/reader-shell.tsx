@@ -31,12 +31,7 @@ function activityPrompt(activity: ActivityPayload): string {
   return activity.type === "fill_blank" ? activity.template : activity.stem;
 }
 
-export function ReaderShell({
-  source,
-  initialExtracts,
-  initialNote,
-  pdfFileUrl,
-}: ReaderShellProps) {
+export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }: ReaderShellProps) {
   const [extracts, setExtracts] = useState(initialExtracts);
   const [proposals, setProposals] = useState<ResolvedProposal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -324,7 +319,7 @@ export function ReaderShell({
           />
         </div>
       </div>
-      <aside className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
+<aside className="flex min-h-0 min-w-0 w-full flex-1 shrink-0 flex-col overflow-y-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 max-h-[min(40svh,24rem)] lg:max-h-none lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
         {note && (
           <section className="mb-8 border-b pb-8">
             <div className="flex items-start justify-between gap-3">
