@@ -1,6 +1,7 @@
 import { dbConfigured, query } from "@/lib/db";
-import { activityById, extractById } from "@/lib/seed";
+import { getExtract } from "./extracts";
 import { getNote } from "./notes";
+import { getActivity } from "./review";
 import { getSource } from "./sources";
 import type { NotebookItemType } from "./types";
 
@@ -9,8 +10,8 @@ import type { NotebookItemType } from "./types";
  * the Library read a whole notebook in one query. The plan's trade is that the
  * API layer enforces the reference instead, so this is that enforcement.
  *
- * Sources go through A's store. Notes, extracts, and activities belong to B, C,
- * and D; until their tables are live, the seed is the source of truth for them.
+ * Every item also has a typed store, which provides the in-memory fixture
+ * fallback when Tiger is not configured.
  */
 const TABLES: Record<NotebookItemType, string> = {
   source: "source",
@@ -39,8 +40,8 @@ export async function referenceExists(
     case "note":
       return (await getNote(itemId)) !== null;
     case "extract":
-      return extractById(itemId) !== undefined;
+      return (await getExtract(itemId)) !== null;
     case "activity":
-      return activityById(itemId) !== undefined;
+      return (await getActivity(itemId)) !== null;
   }
 }

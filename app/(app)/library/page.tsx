@@ -16,12 +16,12 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
-  const [sources, notebooks, notes, extracts, activities] = await Promise.all([
+  const [sources, notes, extracts, activities, notebooks] = await Promise.all([
     listSources(),
-    listNotebooks(),
     listNotes(),
     listExtracts(),
     listActivities(),
+    listNotebooks(),
   ]);
 
   const items: LibraryItem[] = [

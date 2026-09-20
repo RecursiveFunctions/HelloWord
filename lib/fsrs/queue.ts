@@ -5,10 +5,9 @@
  * virtual clock never leaks out of `engine.ts`: compressing the clock changes
  * how fast cards become due, not how dueness is decided.
  */
-import { dbConfigured, query } from "@/lib/db";
-import { listNotes } from "@/lib/store/notes";
 import { getProfile, listActivities, listSchedules } from "@/lib/store/review";
 import { listNotebookItems, listNotebooks } from "@/lib/store/notebooks";
+import { listNotesByIds } from "@/lib/store/notes";
 import { emptySchedule, reviewNow } from "./engine";
 import type { ActivityRow, ScheduleRow } from "@/lib/store/types";
 
@@ -89,33 +88,17 @@ export function toClientCard(card: QueueCard): ClientCard {
 }
 
 async function noteTitles(ids: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (dbConfigured() && ids.length > 0) {
-    const rows = await query<{ id: string; title: string }>(
-      `select id, title from note where id = any($1::uuid[])`,
-      [ids],
-    );
-    for (const row of rows) out.set(row.id, row.title);
-  }
-  const stored = await listNotes();
-  const byId = new Map(stored.map((note) => [note.id, note.title]));
-  for (const id of ids) if (!out.has(id)) out.set(id, byId.get(id) ?? "Untitled note");
+  const out = new Map(
+    (await listNotesByIds(ids)).map((note) => [note.id, note.title]),
+  );
+  for (const id of ids) if (!out.has(id)) out.set(id, "Untitled note");
   return out;
 }
 
 async function noteHashes(ids: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (dbConfigured() && ids.length > 0) {
-    const rows = await query<{ id: string; body_hash: string }>(
-      `select id, body_hash from note where id = any($1::uuid[])`,
-      [ids],
-    );
-    for (const row of rows) out.set(row.id, row.body_hash);
-  }
-  const stored = await listNotes();
-  const byId = new Map(stored.map((note) => [note.id, note.body_hash]));
-  for (const id of ids) if (!out.has(id) && byId.has(id)) out.set(id, byId.get(id)!);
-  return out;
+  return new Map(
+    (await listNotesByIds(ids)).map((note) => [note.id, note.body_hash]),
+  );
 }
 
 /**

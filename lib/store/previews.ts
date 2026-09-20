@@ -1,8 +1,9 @@
 import { hashBody } from "@/lib/hash";
-import { activityById, extractById } from "@/lib/seed";
 import { activityPreview, paperPreview } from "./note-cover";
+import { getExtract } from "./extracts";
 import { firstNoteId, listNotebookItems } from "./notebooks";
 import { getNote } from "./notes";
+import { getActivity } from "./review";
 import { getSource } from "./sources";
 import type { SourceRow } from "./types";
 
@@ -105,7 +106,7 @@ export async function liveItemPreview(type: PreviewType, id: string) {
       });
     }
     case "extract": {
-      const extract = extractById(id);
+      const extract = await getExtract(id);
       if (!extract) return null;
       return paperPreview({
         kicker: "Extract",
@@ -116,7 +117,7 @@ export async function liveItemPreview(type: PreviewType, id: string) {
       });
     }
     case "activity": {
-      const activity = activityById(id);
+      const activity = await getActivity(id);
       if (!activity) return null;
       return activityPreview({ payload: activity.payload });
     }

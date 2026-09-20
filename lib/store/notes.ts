@@ -68,6 +68,7 @@ export async function updateNote(
   });
   return row;
 }
+
 export async function createNote(input: {
   title: string;
   body_md?: string;
@@ -98,4 +99,17 @@ export async function createNote(input: {
   };
   memory().notes.unshift(row);
   return row;
+}
+
+export async function listNotesByIds(ids: string[]): Promise<NoteRow[]> {
+  if (ids.length === 0) return [];
+  if (dbConfigured()) {
+    const rows = await query(
+      `select ${COLUMNS} from note where id = any($1::uuid[]) order by updated_at desc`,
+      [ids],
+    );
+    return rows.map(hydrate);
+  }
+  const wanted = new Set(ids);
+  return memory().notes.filter((note) => wanted.has(note.id));
 }

@@ -6,7 +6,7 @@ import {
   reviewNow,
 } from "@/lib/fsrs/engine";
 import { gradeResponse } from "@/lib/fsrs/grade";
-import { conceptNotes } from "@/lib/seed";
+import { firstConceptForNote } from "@/lib/store/concepts";
 import {
   getActivity,
   getProfile,
@@ -52,12 +52,12 @@ export async function POST(request: Request) {
 
   // One concept per event keeps the hypertable rollup simple; a note with
   // several concepts contributes to whichever is listed first.
-  const concept = conceptNotes.find((c) => c.note_id === activity.note_id);
+  const concept = await firstConceptForNote(activity.note_id);
   await recordReviewEvent({
     time: now.toISOString(),
     activity_id: activityId,
     note_id: activity.note_id,
-    concept_id: concept?.concept_id ?? null,
+    concept_id: concept?.id ?? null,
     rating: effective,
     state: log.state,
     elapsed_days: log.elapsed_days,
