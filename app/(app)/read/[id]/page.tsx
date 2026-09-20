@@ -35,7 +35,10 @@ export default async function ReadPage({
     }));
 
   return (
-    <div data-full-bleed className="flex min-h-svh">
+    <div
+      data-full-bleed
+      className="flex min-h-[calc(100svh-var(--topbar-h))]"
+    >
       <div className="min-w-0 flex-1 overflow-auto px-10 py-8">
         <p className="text-sm text-muted-foreground">
           <Link href="/notebooks" className="hover:underline">
