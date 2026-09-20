@@ -1,6 +1,10 @@
 import { dbConfigured, query } from "@/lib/db";
 import { seedReviewDaily } from "@/lib/seed";
-import { listConceptNotes, listConcepts } from "@/lib/store/concepts";
+import {
+  listConceptExtracts,
+  listConceptNotes,
+  listConcepts,
+} from "@/lib/store/concepts";
 import { listNotebookItems } from "@/lib/store/notebooks";
 import { listActivities } from "@/lib/store/review";
 
@@ -38,12 +42,14 @@ type DailyRow = {
 };
 
 async function scope(notebookId: string) {
-  const [items, activities, concepts, relations] = await Promise.all([
-    listNotebookItems(notebookId),
-    listActivities(),
-    listConcepts(),
-    listConceptNotes(),
-  ]);
+  const [items, activities, concepts, relations, extractRelations] =
+    await Promise.all([
+      listNotebookItems(notebookId),
+      listActivities(),
+      listConcepts(),
+      listConceptNotes(),
+      listConceptExtracts(),
+    ]);
   const noteIds = new Set(
     items.filter((item) => item.item_type === "note").map((item) => item.item_id),
   );
@@ -55,11 +61,19 @@ async function scope(notebookId: string) {
   for (const activity of activities) {
     if (directActivityIds.has(activity.id)) noteIds.add(activity.note_id);
   }
-  const conceptIds = new Set(
-    relations
+  const extractIds = new Set(
+    items
+      .filter((item) => item.item_type === "extract")
+      .map((item) => item.item_id),
+  );
+  const conceptIds = new Set([
+    ...relations
       .filter((relation) => noteIds.has(relation.note_id))
       .map((relation) => relation.concept_id),
-  );
+    ...extractRelations
+      .filter((relation) => extractIds.has(relation.extract_id))
+      .map((relation) => relation.concept_id),
+  ]);
   return concepts.filter((concept) => conceptIds.has(concept.id));
 }
 

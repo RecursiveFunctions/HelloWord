@@ -1,6 +1,6 @@
 import { dbConfigured, query } from "@/lib/db";
 import { memory } from "./memory";
-import type { ConceptNoteRow, ConceptRow } from "./types";
+import type { ConceptExtractRow, ConceptNoteRow, ConceptRow } from "./types";
 
 function hydrateConcept(row: Record<string, unknown>): ConceptRow {
   return { id: String(row.id), label: String(row.label) };
@@ -23,6 +23,17 @@ export async function listConceptNotes(): Promise<ConceptNoteRow[]> {
     }));
   }
   return memory().conceptNotes;
+}
+
+export async function listConceptExtracts(): Promise<ConceptExtractRow[]> {
+  if (dbConfigured()) {
+    const rows = await query(`select concept_id, extract_id from concept_extract`);
+    return rows.map((row) => ({
+      concept_id: String(row.concept_id),
+      extract_id: String(row.extract_id),
+    }));
+  }
+  return memory().conceptExtracts;
 }
 
 export async function firstConceptForNote(

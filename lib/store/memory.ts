@@ -11,6 +11,7 @@
  */
 import {
   activities as seedActivities,
+  conceptExtracts as seedConceptExtracts,
   conceptNotes as seedConceptNotes,
   concepts as seedConcepts,
   extracts as seedExtracts,
@@ -25,6 +26,7 @@ import { isPublicCoverPath, resetCoverBlobs } from "./covers";
 import { DEFAULT_FEEDS } from "./default-feeds";
 import type {
   ActivityRow,
+  ConceptExtractRow,
   ConceptNoteRow,
   ConceptRow,
   ExtractRow,
@@ -43,6 +45,7 @@ export type MemoryTables = {
   notes: NoteRow[];
   concepts: ConceptRow[];
   conceptNotes: ConceptNoteRow[];
+  conceptExtracts: ConceptExtractRow[];
   extracts: ExtractRow[];
   notebooks: NotebookRow[];
   notebookItems: NotebookItemRow[];
@@ -59,6 +62,7 @@ function seeded(): MemoryTables {
     notes: seedNotes.map((note) => ({ ...note })),
     concepts: seedConcepts.map((concept) => ({ ...concept })),
     conceptNotes: seedConceptNotes.map((relation) => ({ ...relation })),
+    conceptExtracts: seedConceptExtracts.map((relation) => ({ ...relation })),
     extracts: seedExtracts.map((extract) => ({
       ...extract,
       suggestion_reason: null,

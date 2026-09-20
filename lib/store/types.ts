@@ -52,6 +52,11 @@ export type ConceptNoteRow = {
   note_id: string;
 };
 
+export type ConceptExtractRow = {
+  concept_id: string;
+  extract_id: string;
+};
+
 export type ExtractRow = {
   id: string;
   source_id: string | null;
