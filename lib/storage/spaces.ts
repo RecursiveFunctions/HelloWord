@@ -2,14 +2,15 @@
  * DigitalOcean Spaces, which is S3-compatible, so the AWS SDK works unchanged
  * once the endpoint and region are pointed at it.
  *
- * Spaces holds the original PDF and nothing else. Per the plan's invariant, no
- * code outside `lib/ingest/*` opens a `storage_key`: everything downstream of
- * ingest reads `source.markdown`. Keeping the PDF is for a future side-by-side
- * viewer, not a data path.
+ * Spaces holds the original PDF. Ingest reads it to extract markdown. The
+ * reader file route is the other allowed caller: it streams the same object
+ * so `/read/[id]` can show the original pages. Extracts and notes still read
+ * `source.markdown` only.
  */
 import { Buffer } from "node:buffer";
 import {
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -83,6 +84,17 @@ export async function getBytes(key: string): Promise<Uint8Array> {
   );
   if (!result.Body) throw new Error(`Spaces object ${key} has no body.`);
   return new Uint8Array(await result.Body.transformToByteArray());
+}
+
+export async function objectExists(key: string): Promise<boolean> {
+  try {
+    await client().send(
+      new HeadObjectCommand({ Bucket: env.spaces.bucket!, Key: key }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

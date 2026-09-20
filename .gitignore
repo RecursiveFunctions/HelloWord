@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# locally archived PDFs when Spaces is unset
+/data/pdfs/
+
 # keep the example env
 !.env.example
 

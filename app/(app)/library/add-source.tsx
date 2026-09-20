@@ -154,8 +154,8 @@ export function AddSource() {
           />
           <p className="mt-2 text-xs text-muted-foreground">
             Text-layer PDFs are read by unpdf. A scanned one goes to Gemini page
-            vision. The original is kept in Spaces; the reader only ever sees the
-            markdown.
+            vision. The original is archived so the reader can open the pages.
+            Files over 4 MB need DigitalOcean Spaces.
           </p>
         </TabsContent>
 
@@ -239,7 +239,12 @@ async function uploadViaPresign(file: File): Promise<Response> {
     body: JSON.stringify({ filename: file.name }),
   });
 
-  if (!presigned.ok) return uploadDirect(file);
+  // 503 means Spaces is unset. Falling back to multipart would hit the
+  // 4.5 MB platform cap, so surface the presign error instead.
+  if (!presigned.ok) {
+    if (presigned.status === 503) return presigned;
+    return uploadDirect(file);
+  }
 
   const { key, url, origin_uri } = await presigned.json();
 

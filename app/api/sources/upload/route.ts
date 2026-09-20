@@ -17,7 +17,7 @@ const PresignBody = z.object({
 export async function POST(request: Request): Promise<Response> {
   if (!spacesConfigured()) {
     return fail(
-      "Spaces is not configured, so presigned uploads are unavailable. Small PDFs still work through POST /api/sources.",
+      "Files over 4 MB need DigitalOcean Spaces. Set SPACES_KEY, SPACES_SECRET, and SPACES_BUCKET, or upload a smaller PDF.",
       503,
     );
   }
