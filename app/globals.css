@@ -74,6 +74,9 @@
   --chart-4: oklch(0.62 0.12 80);
   --chart-5: oklch(0.45 0.08 30);
   --radius: 0.625rem;
+  /* Height of the app top bar. Full-bleed screens subtract it from the
+     viewport so they fill what is left rather than overflowing past it. */
+  --topbar-h: 3.5rem;
   --sidebar: oklch(0.96 0.014 80);
   --sidebar-foreground: oklch(0.22 0.02 50);
   --sidebar-primary: oklch(0.48 0.12 48);

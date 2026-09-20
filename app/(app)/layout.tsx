@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppTopbar } from "@/components/app-topbar";
 import { dueCounts } from "@/lib/fsrs/queue";
 
 export default async function AppLayout({
@@ -12,8 +12,8 @@ export default async function AppLayout({
   const { total: dueCount } = await dueCounts();
 
   return (
-    <div className="flex min-h-full">
-      <AppSidebar dueCount={dueCount} />
+    <div className="flex min-h-full flex-col">
+      <AppTopbar dueCount={dueCount} />
       <div className="min-w-0 flex-1 bg-background">
         {/* The reader needs the full width for two panes, so a page can opt out
             of the reading-width container by marking its root full-bleed. */}

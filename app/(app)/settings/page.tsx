@@ -59,6 +59,14 @@ export default async function SettingsPage() {
           ) : null}
         </ul>
       </section>
+
+      <section>
+        <h2 className="mb-3 font-heading text-lg">Environment</h2>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Seed fixtures. Set <code className="font-mono">AI_MOCK=1</code> until
+          C&apos;s client is live.
+        </p>
+      </section>
     </div>
   );
 }
