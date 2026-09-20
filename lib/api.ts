@@ -34,6 +34,7 @@ export const ApiPath = {
   extracts: "/api/extracts",
   extract: (id: string) => `/api/extracts/${id}`,
   extractReanchor: (id: string) => `/api/extracts/${id}/reanchor`,
+  manualCloze: "/api/activities/cloze",
 
   /** Owner C */
   aiExtracts: "/api/ai/extracts",
@@ -69,11 +70,22 @@ export const PatchNoteBody = z.object({
 });
 
 export const CreateExtractBody = z.object({
-  source_id: z.string().uuid().optional(),
-  note_id: z.string().uuid().optional(),
+  source_id: z.string().uuid(),
   body_md: z.string().min(1),
   priority: z.number().int().min(0).max(100).default(50),
   selector: SelectorBundle,
+  suggested_by: z.enum(["human", "nemotron"]).default("human"),
+  reason: z.string().trim().max(500).optional(),
+  concepts: z.array(z.string().trim().min(1).max(80)).max(5).default([]),
+});
+
+export const ManualClozeBody = z.object({
+  extract_id: z.string().uuid(),
+  start: z.number().int().nonnegative(),
+  end: z.number().int().positive(),
+}).refine(({ start, end }) => end > start, {
+  message: "Cloze end must be after start.",
+  path: ["end"],
 });
 
 export const AiExtractsBody = z.object({
@@ -142,6 +154,7 @@ export type CreateSourceBody = z.infer<typeof CreateSourceBody>;
 export type CreateNoteBody = z.infer<typeof CreateNoteBody>;
 export type PatchNoteBody = z.infer<typeof PatchNoteBody>;
 export type CreateExtractBody = z.infer<typeof CreateExtractBody>;
+export type ManualClozeBody = z.infer<typeof ManualClozeBody>;
 export type AiExtractsBody = z.infer<typeof AiExtractsBody>;
 export type AiNoteBody = z.infer<typeof AiNoteBody>;
 export type AiActivitiesBody = z.infer<typeof AiActivitiesBody>;

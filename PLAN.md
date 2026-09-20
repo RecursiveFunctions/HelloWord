@@ -2,11 +2,11 @@
 
 ## What we are building
 
-A "lightweight Obsidian" for incremental reading. You add a PDF or a URL, the app converts it to markdown, AI proposes passages worth keeping (extracts), you distill those into markdown **notes**, and the notes become gradeable questions (activities) scheduled with FSRS. Notebooks are saved collections of references, so one source or activity appears in many notebooks. Each notebook shows diagnostics: what you know, what you are struggling with, what you have not touched.
+A "lightweight Obsidian" for incremental reading. You add a PDF or a URL, the app converts it to markdown, AI proposes passages worth keeping (extracts), you distill those into markdown **notes**, and notes or deliberate manual clozes become gradeable activities scheduled with FSRS. Notebooks are saved collections of references, so one source or activity appears in many notebooks. Each notebook shows diagnostics: what you know, what you are struggling with, what you have not touched.
 
 ## The note is the pivot, not a pipeline format
 
-The markdown note is the real artifact and the point where the human intervenes. Passive reading produces extracts; active recall consumes activities; **the note is the editable bridge between them.** AI may draft a note from extracts, but it is always human-readable markdown the user can rewrite, and activities are generated from the note *as edited*, not from the raw source.
+The markdown note is the real artifact and the point where the human intervenes for AI-generated study material. Passive reading produces extracts; active recall consumes activities; **the note is the editable bridge for AI generation.** AI may draft a note from extracts, but it is always human-readable markdown the user can rewrite, and AI-generated activities come from the note *as edited*. A deliberate manual cloze is itself a human intervention and may instead use an extract as its parent.
 
 ```mermaid
 flowchart LR
@@ -28,7 +28,7 @@ flowchart LR
 
 Three consequences for the build:
 
-- Nothing generates an activity directly from a source. The note is always in the path, so the user's own words are what gets tested.
+- AI never generates an activity directly from a source or extract. A deliberate manual cloze can create or reuse an extract and derive directly from it.
 - Note edits should mark downstream activities stale and offer regeneration, rather than silently diverging.
 - This is also the best answer to "is this just an AI wrapper?" The human edit step is the product, and the demo should show someone rewriting an AI-drafted note before being quizzed on it.
 
@@ -122,10 +122,10 @@ Key columns:
 - `extract` - source or note ref, markdown body, priority 0-100, and a **selector bundle** (`exact`, `prefix`, `suffix`, `start`, `end`) rather than editor positions. Embedding `vector(768)`.
 - `note` - **the central table.** Title, markdown body, `origin` (`human` | `ai_drafted` | `ai_edited`), `body_hash`, updated-at. Embedding `vector(768)`.
 - `extract_note` - join table, because one extract can feed several notes and one note can distill many extracts.
-- `activity` - type (`mcq` | `select_all` | `fill_blank` | `closed`), stem, options, answer key, **parent note**, `source_body_hash` so a note edit marks it stale, optional `variant_of` for synthetic variants.
+- `activity` - type (`mcq` | `select_all` | `fill_blank` | `closed`), payload, exactly one **parent note or extract**, nullable `source_body_hash` so a note edit marks note-backed activities stale, optional `variant_of` for synthetic variants.
 - `review_event` - **the hypertable.** `time`, activity id, rating, concept id, elapsed, stability, difficulty. Append-only.
 
-`source` and `note` are deliberately different tables even though both hold markdown: sources are immutable imports, notes are user-owned and editable. Only notes generate activities.
+`source` and `note` are deliberately different tables even though both hold markdown: sources are immutable imports, notes are user-owned and editable. AI generation is note-only; explicit manual clozes may be extract-backed.
 
 ## Parallel development: contracts first
 

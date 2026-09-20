@@ -1,10 +1,11 @@
-import { ids, SEED_NOW } from "./ids";
+import { SEED_NOW } from "./ids";
 import { activities, conceptNotes } from "./data";
 
 export type SeedReviewEvent = {
   time: string;
   activity_id: string;
-  note_id: string;
+  note_id: string | null;
+  extract_id: string | null;
   concept_id: string | null;
   rating: 1 | 2 | 3 | 4;
   state: number;
@@ -54,7 +55,7 @@ export function generateReviewEvents(): SeedReviewEvent[] {
     const reviewsToday = 4 + Math.floor(rand() * 5);
     for (let i = 0; i < reviewsToday; i++) {
       const activity = activities[Math.floor(rand() * activities.length)];
-      const concepts = conceptByNote.get(activity.note_id) ?? [];
+      const concepts = activity.note_id ? conceptByNote.get(activity.note_id) ?? [] : [];
       const concept_id = concepts.length
         ? concepts[Math.floor(rand() * concepts.length)]
         : null;
@@ -75,6 +76,7 @@ export function generateReviewEvents(): SeedReviewEvent[] {
         time: time.toISOString(),
         activity_id: activity.id,
         note_id: activity.note_id,
+        extract_id: activity.extract_id,
         concept_id,
         rating,
         state: 2,

@@ -45,10 +45,11 @@ export type SeedExtract = {
 
 export type SeedActivity = {
   id: string;
-  note_id: string;
+  note_id: string | null;
+  extract_id: string | null;
   type: ActivityPayload["type"];
   payload: ActivityPayload;
-  source_body_hash: string;
+  source_body_hash: string | null;
   variant_of: string | null;
   created_at: string;
 };
@@ -270,6 +271,7 @@ function act(
   return {
     id: ids.activity(n),
     note_id: parent.id,
+    extract_id: null,
     type: payload.type,
     payload,
     source_body_hash: stale ? "stale-seed-hash" : parent.body_hash,

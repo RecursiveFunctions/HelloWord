@@ -105,10 +105,11 @@ export type FeedRow = {
 
 export type ActivityRow = {
   id: string;
-  note_id: string;
+  note_id: string | null;
+  extract_id: string | null;
   type: ActivityPayload["type"];
   payload: ActivityPayload;
-  source_body_hash: string;
+  source_body_hash: string | null;
   variant_of: string | null;
   created_at: string;
 };
@@ -157,7 +158,8 @@ export type SchedulerProfileRow = {
 export type ReviewEventRow = {
   time: string;
   activity_id: string;
-  note_id: string;
+  note_id: string | null;
+  extract_id: string | null;
   concept_id: string | null;
   rating: Rating;
   state: number;

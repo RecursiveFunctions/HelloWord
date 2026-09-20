@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { resolveExact } from "@/lib/anchor/selector";
+import { buildSelector, isAnchorableRange, resolveExact } from "@/lib/anchor/selector";
 import type { ExtractProposal, SelectorBundle } from "@/lib/contracts";
 import type { ActivityPayload } from "@/lib/contracts/activity";
 import type { ExtractRow, NoteRow } from "@/lib/store/types";
@@ -26,6 +26,8 @@ type ReaderShellProps = {
   /** When the source is a PDF, link to the archived original in a new tab. */
   pdfFileUrl?: string;
 };
+
+type SourceSelection = { start: number; end: number };
 
 function activityPrompt(activity: ActivityPayload): string {
   return activity.type === "fill_blank" ? activity.template : activity.stem;
@@ -47,6 +49,9 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
   const [activityStatus, setActivityStatus] = useState<string>();
   const [generatingActivities, setGeneratingActivities] = useState(false);
   const [acceptingActivities, setAcceptingActivities] = useState(false);
+  const [selection, setSelection] = useState<SourceSelection | null>(null);
+  const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number } | null>(null);
+  const [manualStatus, setManualStatus] = useState<string>();
 
   const paintedExtracts = useMemo<PaintedExtract[]>(
     () =>
@@ -65,6 +70,84 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
       start: proposal.selector.start,
       end: proposal.selector.end,
     }));
+
+  const createHumanExtract = useCallback(async (range: SourceSelection) => {
+    if (!isAnchorableRange(range.start, range.end)) {
+      throw new Error("Select at least 10 characters for an extract.");
+    }
+    const selector = buildSelector(source.markdown, range.start, range.end);
+    const response = await fetch("/api/extracts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source_id: source.id,
+        body_md: selector.exact,
+        priority: 50,
+        selector,
+        suggested_by: "human",
+      }),
+    });
+    const body = (await response.json()) as {
+      extract?: ExtractRow;
+      duplicate?: boolean;
+      error?: string;
+    };
+    if (!response.ok || !body.extract) throw new Error(body.error || "Could not create extract.");
+    setExtracts((current) =>
+      current.some(({ id }) => id === body.extract!.id) ? current : [...current, body.extract!],
+    );
+    return { extract: body.extract, duplicate: body.duplicate === true };
+  }, [source.id, source.markdown]);
+
+  const extractSelection = useCallback(async () => {
+    if (!selection) return;
+    setSelectionMenu(null);
+    try {
+      const result = await createHumanExtract(selection);
+      setManualStatus(result.duplicate ? "That extract already exists." : "Extract created.");
+    } catch (error) {
+      setManualStatus(error instanceof Error ? error.message : "Could not create extract.");
+    }
+  }, [createHumanExtract, selection]);
+
+  const clozeSelection = useCallback(async () => {
+    if (!selection) return;
+    setSelectionMenu(null);
+    try {
+      const containing = extracts.find(
+        (extract) =>
+          extract.selector.start <= selection.start && extract.selector.end >= selection.end,
+      );
+      const parent = containing ?? (await createHumanExtract(selection)).extract;
+      const start = containing ? selection.start - parent.selector.start : 0;
+      const end = containing ? selection.end - parent.selector.start : parent.body_md.length;
+      const response = await fetch("/api/activities/cloze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ extract_id: parent.id, start, end }),
+      });
+      const body = (await response.json()) as { duplicate?: boolean; error?: string };
+      if (!response.ok) throw new Error(body.error || "Could not create cloze.");
+      setManualStatus(body.duplicate ? "That cloze already exists." : "Cloze added to review.");
+    } catch (error) {
+      setManualStatus(error instanceof Error ? error.message : "Could not create cloze.");
+    }
+  }, [createHumanExtract, extracts, selection]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.code === "KeyX" && selection) {
+        event.preventDefault();
+        void extractSelection();
+      } else if (event.code === "KeyZ" && selection) {
+        event.preventDefault();
+        void clozeSelection();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [clozeSelection, extractSelection, selection]);
 
   async function requestProposals(): Promise<ResolvedProposal[]> {
     setLoading(true);
@@ -316,7 +399,41 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
             markdown={source.markdown}
             extracts={paintedExtracts}
             proposals={paintedProposals}
+            onSelectionChange={(next) => {
+              setSelection(next);
+              if (!next) setSelectionMenu(null);
+            }}
+            onSelectionMenu={setSelectionMenu}
           />
+          {manualStatus ? (
+            <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
+              {manualStatus}
+            </p>
+          ) : null}
+          {selection ? (
+            <div className="sticky bottom-3 z-20 mt-4 flex gap-2 rounded-xl border bg-background/95 p-2 shadow-lg backdrop-blur lg:hidden">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => void extractSelection()}>
+                Extract
+              </Button>
+              <Button size="sm" className="flex-1" onClick={() => void clozeSelection()}>
+                Cloze
+              </Button>
+            </div>
+          ) : null}
+          {selectionMenu ? (
+            <div
+              className="fixed z-50 min-w-44 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
+              style={{ left: selectionMenu.x, top: selectionMenu.y }}
+              role="menu"
+            >
+              <button className="flex w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent" onClick={() => void extractSelection()}>
+                Create extract <span className="ml-auto pl-4 text-muted-foreground">Alt+X</span>
+              </button>
+              <button className="flex w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent" onClick={() => void clozeSelection()}>
+                Create cloze <span className="ml-auto pl-4 text-muted-foreground">Alt+Z</span>
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
       <aside className="flex min-h-0 min-w-0 w-full flex-1 shrink-0 flex-col overflow-y-auto overscroll-y-contain border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 max-h-[min(40svh,24rem)] lg:max-h-none lg:h-full lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
