@@ -36,9 +36,7 @@ export default async function NotebooksPage() {
         <div>
           <h1 className="font-heading text-3xl tracking-tight">Notebooks</h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Saved collections of sources, notes, extracts, and activities.
-            Nothing is owned by a notebook — membership is a join table, so one
-            source can live in many places.
+            What's on your mind?
           </p>
         </div>
         <NewNotebook />

@@ -33,9 +33,7 @@ export default async function LibraryPage() {
       <header>
         <h1 className="font-heading text-3xl tracking-tight">Library</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Everything that exists, globally. Select any mix of sources, notes,
-          extracts, and activities and add them to a notebook — membership is a
-          reference, so one item can live in several.
+          Browse your collection.
         </p>
       </header>
 

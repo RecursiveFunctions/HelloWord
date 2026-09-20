@@ -36,9 +36,7 @@ export default async function ReviewPage({
       <header>
         <h1 className="font-heading text-3xl tracking-tight">Review</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Everything due, across every notebook, until the queue empties or you
-          leave. FSRS reschedules each card the moment you rate it, so anything
-          you fail comes back in this same session.
+          Practice makes perfect.
         </p>
       </header>
 

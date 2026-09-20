@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ClockPresets } from "@/components/clock-presets";
+import { ColorWheel } from "@/components/color-wheel";
 import { aFactorCopy } from "@/lib/contracts/scheduling";
 import { getProfile } from "@/lib/store/review";
 
@@ -20,6 +21,10 @@ export default async function SettingsPage() {
           screen, where you can watch it take effect.
         </p>
       </header>
+
+      <section>
+        <ColorWheel />
+      </section>
 
       <section>
         <h2 className="mb-3 font-heading text-lg">Clock preset</h2>
