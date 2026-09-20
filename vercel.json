@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "buildCommand": "npm run vercel-build",
   "regions": ["iad1"],
   "functions": {
     "app/api/sources/**": {
@@ -8,6 +9,9 @@
     },
     "app/api/feeds/**": {
       "maxDuration": 30
+    },
+    "app/api/distill/**": {
+      "maxDuration": 60
     },
     "app/api/ai/**": {
       "maxDuration": 60

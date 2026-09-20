@@ -3,6 +3,15 @@ import { Toaster } from "@/components/ui/toast";
 import { dueCounts } from "@/lib/fsrs/queue";
 import { readingDueCount } from "@/lib/reading/queue";
 
+async function badge(name: string, count: () => Promise<number>): Promise<number> {
+  try {
+    return await count();
+  } catch (error) {
+    console.error(`Could not count the ${name} badge`, error);
+    return 0;
+  }
+}
+
 export default async function AppLayout({
   children,
 }: {
@@ -11,9 +20,12 @@ export default async function AppLayout({
   // Same source of truth as the Review screen. Counting against the frozen
   // seed clock instead would put a different number in the badge than the one
   // the queue actually serves.
-  const [{ total: dueCount }, readCount] = await Promise.all([
-    dueCounts(),
-    readingDueCount(),
+  //
+  // The badges are decoration and this layout wraps every screen, so a count
+  // that cannot be computed is a missing badge, not a 500 on all of them.
+  const [dueCount, readCount] = await Promise.all([
+    badge("review", async () => (await dueCounts()).total),
+    badge("read", readingDueCount),
   ]);
 
   return (
