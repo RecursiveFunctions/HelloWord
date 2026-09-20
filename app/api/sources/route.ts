@@ -3,9 +3,30 @@ import { CreateSourceBody } from "@/lib/api";
 import { ingestSource } from "@/lib/ingest";
 import { titleFromUrl } from "@/lib/ingest/text";
 import { persistPdf } from "@/lib/storage/pdf";
+import { addNotebookItems, getNotebook } from "@/lib/store/notebooks";
+import { createNote } from "@/lib/store/notes";
 import { createSource, findSourceByUri, listSources } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
-import { fail, invalid, ok, readJson } from "../_respond";
+import { fail, invalid, notFound, ok, readJson } from "../_respond";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Text uploads become notes; anything larger is almost certainly not a note. */
+const MAX_NOTE_BYTES = 1_000_000;
+
+/**
+ * `notebook_id` is optional on every create path: when present the new row is
+ * linked into that notebook, so adding from a notebook lands in the Library and
+ * the notebook in one request. Returns a 404 response for an unknown notebook.
+ */
+async function notebookTarget(raw: unknown): Promise<string | null | Response> {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw !== "string" || !UUID.test(raw)) {
+    return fail("notebook_id must be a uuid.", 422);
+  }
+  if (!(await getNotebook(raw))) return notFound("Notebook");
+  return raw;
+}
 
 /** Ingest can take the better part of a minute on a scanned PDF. */
 export const maxDuration = 60;
@@ -52,6 +73,11 @@ async function handleJson(request: Request): Promise<Response> {
   const parsed = CreateSourceBody.safeParse(withTitle);
   if (!parsed.success) return invalid(parsed.error);
 
+  const notebookId = await notebookTarget(
+    (body as { notebook_id?: unknown }).notebook_id,
+  );
+  if (notebookId instanceof Response) return notebookId;
+
   const { kind, title, origin_uri, storage_key } = parsed.data;
 
   if (kind === "url" && !/^https?:\/\//i.test(origin_uri)) {
@@ -61,9 +87,13 @@ async function handleJson(request: Request): Promise<Response> {
   // Re-posting a URL that failed is how you retry it; re-posting one that is
   // ready hands back the existing row rather than ingesting it twice.
   const existing = await findSourceByUri(origin_uri);
-  if (existing) return resume(existing);
+  if (existing) {
+    await linkToNotebook(notebookId, "source", existing.id);
+    return resume(existing);
+  }
 
   const source = await createSource({ kind, title, origin_uri, storage_key });
+  await linkToNotebook(notebookId, "source", source.id);
   after(() => ingestSource(source.id));
   return ok({ source }, 202);
 }
@@ -78,15 +108,24 @@ async function handleUpload(request: Request): Promise<Response> {
 
   const file = form.get("file");
   if (!(file instanceof File)) {
-    return fail("Expected a `file` field holding a PDF.");
+    return fail("Expected a `file` field holding a PDF, .md, or .txt file.");
   }
   if (file.size === 0) return fail("That file is empty.");
 
-  const isPdf =
-    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const notebookId = await notebookTarget(form.get("notebook_id") ?? undefined);
+  if (notebookId instanceof Response) return notebookId;
+
+  const lowerName = file.name.toLowerCase();
+  const isText =
+    /\.(md|markdown|txt)$/.test(lowerName) ||
+    file.type === "text/markdown" ||
+    file.type === "text/plain";
+  if (isText) return handleTextUpload(file, form, notebookId);
+
+  const isPdf = file.type === "application/pdf" || lowerName.endsWith(".pdf");
   if (!isPdf) {
     return fail(
-      "Only PDFs can be uploaded. Paste a URL for anything else — every source becomes markdown either way.",
+      "Supported files are PDF, Markdown (.md), and text (.txt). Paste a URL for anything else.",
     );
   }
 
@@ -110,8 +149,39 @@ async function handleUpload(request: Request): Promise<Response> {
     storage_key: stored.storage_key,
   });
 
+  await linkToNotebook(notebookId, "source", source.id);
   after(() => ingestSource(source.id, bytes));
   return ok({ source }, 202);
+}
+
+async function handleTextUpload(
+  file: File,
+  form: FormData,
+  notebookId: string | null,
+): Promise<Response> {
+  if (file.size > MAX_NOTE_BYTES) {
+    return fail("Text files over 1 MB are too large to import as a note.", 413);
+  }
+
+  const text = await file.text();
+  const heading = /^#\s+(.+)$/m.exec(text)?.[1]?.trim();
+  const title =
+    String(form.get("title") ?? "").trim() ||
+    heading ||
+    file.name.replace(/\.(md|markdown|txt)$/i, "").replace(/[-_]+/g, " ");
+
+  const note = await createNote({ title, body_md: text });
+  await linkToNotebook(notebookId, "note", note.id);
+  return ok({ note }, 201);
+}
+
+async function linkToNotebook(
+  notebookId: string | null,
+  itemType: "source" | "note",
+  itemId: string,
+): Promise<void> {
+  if (!notebookId) return;
+  await addNotebookItems(notebookId, [{ item_type: itemType, item_id: itemId }]);
 }
 
 function resume(existing: SourceRow): Response {

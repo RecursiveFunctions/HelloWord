@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { UploadCloud, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { LibraryItem, LibraryItemType } from "../../library/items";
+import { useFileDrop, useNotebookUpload } from "../use-notebook-upload";
+import { AddMenu } from "./add-menu";
 import {
   useWorkspaceView,
   WorkspaceViewToggle,
@@ -34,17 +37,33 @@ const SECTIONS: { type: LibraryItemType; heading: string; empty: string }[] = [
 export function NotebookContents({
   notebookId,
   items,
+  libraryItems,
   initialView = "cards",
   fromQuery = false,
 }: {
   notebookId: string;
   items: LibraryItem[];
+  /** Library items not yet in this notebook, for the "Add from library" picker. */
+  libraryItems: LibraryItem[];
   initialView?: WorkspaceView;
   fromQuery?: boolean;
 }) {
   const router = useRouter();
   const { view, choose } = useWorkspaceView({ initialView, fromQuery });
   const [removing, setRemoving] = useState<string | null>(null);
+  const { upload, busy, notice, supported } = useNotebookUpload(notebookId);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const { active, handlers } = useFileDrop((files) => void upload(files));
+
+  // Sources extract in the background; re-render until they settle.
+  const ingesting = items.some(
+    (item) => item.status === "pending" || item.status === "processing",
+  );
+  useEffect(() => {
+    if (!ingesting) return;
+    const timer = setInterval(() => router.refresh(), 1500);
+    return () => clearInterval(timer);
+  }, [ingesting, router]);
 
   async function remove(item: LibraryItem) {
     const key = `${item.type}:${item.id}`;
@@ -63,11 +82,51 @@ export function NotebookContents({
   }
 
   return (
-    <div className="space-y-8">
-      {items.length > 0 ? (
-        <div className="flex justify-end">
-          <WorkspaceViewToggle view={view} onChange={choose} />
+    <div
+      {...handlers}
+      className={cn(
+        "relative space-y-8 rounded-xl transition-shadow",
+        active && "ring-2 ring-primary ring-offset-8 ring-offset-background",
+      )}
+    >
+      {active ? (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm">
+          <p className="flex items-center gap-2 text-lg font-medium">
+            <UploadCloud className="size-5" /> Drop to add to this notebook
+          </p>
         </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {items.length > 0 ? (
+          <WorkspaceViewToggle view={view} onChange={choose} />
+        ) : null}
+        <AddMenu
+          notebookId={notebookId}
+          libraryItems={libraryItems}
+          busy={busy}
+          onFiles={(files) => void upload(files)}
+          onError={setLocalError}
+        />
+      </div>
+
+      {notice || localError ? (
+        <p
+          role="status"
+          className={cn(
+            "rounded-lg border px-3 py-2 text-sm",
+            notice?.tone === "info" ? "bg-accent/50" : "text-destructive",
+          )}
+        >
+          {localError ?? notice?.text}
+        </p>
+      ) : null}
+
+      {items.length === 0 ? (
+        <p className="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+          Drop {supported} files here, or use Add to paste a URL, write a note,
+          or pull something from your library.
+        </p>
       ) : null}
 
       {SECTIONS.map((section) => {

@@ -1,5 +1,6 @@
 import { dbConfigured, query } from "@/lib/db";
-import { activityById, extractById, noteById } from "@/lib/seed";
+import { activityById, extractById } from "@/lib/seed";
+import { getNote } from "./notes";
 import { getSource } from "./sources";
 import type { NotebookItemType } from "./types";
 
@@ -36,7 +37,7 @@ export async function referenceExists(
     case "source":
       return (await getSource(itemId)) !== null;
     case "note":
-      return noteById(itemId) !== undefined;
+      return (await getNote(itemId)) !== null;
     case "extract":
       return extractById(itemId) !== undefined;
     case "activity":

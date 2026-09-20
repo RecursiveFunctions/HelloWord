@@ -1,7 +1,8 @@
 import { hashBody } from "@/lib/hash";
-import { activityById, extractById, noteById } from "@/lib/seed";
+import { activityById, extractById } from "@/lib/seed";
 import { activityPreview, paperPreview } from "./note-cover";
 import { firstNoteId, listNotebookItems } from "./notebooks";
+import { getNote } from "./notes";
 import { getSource } from "./sources";
 import type { SourceRow } from "./types";
 
@@ -33,7 +34,7 @@ export async function notebookCoverToken(
   notebookId: string,
 ): Promise<string | null> {
   const noteId = await firstNoteId(notebookId);
-  const note = noteId ? noteById(noteId) : undefined;
+  const note = noteId ? await getNote(noteId) : null;
   if (note) return note.body_hash;
 
   const source = await firstReadySource(notebookId);
@@ -60,7 +61,7 @@ export async function liveNotebookCover(input: {
   color: string;
 }) {
   const noteId = await firstNoteId(input.notebookId);
-  const note = noteId ? noteById(noteId) : undefined;
+  const note = noteId ? await getNote(noteId) : null;
   if (note) {
     return paperPreview({
       title: note.title,
@@ -95,7 +96,7 @@ export async function liveItemPreview(type: PreviewType, id: string) {
       });
     }
     case "note": {
-      const note = noteById(id);
+      const note = await getNote(id);
       if (!note) return null;
       return paperPreview({
         title: note.title,
