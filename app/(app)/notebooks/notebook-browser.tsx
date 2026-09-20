@@ -4,9 +4,14 @@ import { NotebookHistory } from "@/components/history-menu";
 import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2, UploadCloud } from "lucide-react";
+import { Info, Trash2, UploadCloud } from "lucide-react";
 import { Sparkline } from "@/components/sparkline";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -51,7 +56,23 @@ export function NotebookBrowser({
       <PageHeader
         className="mb-8"
         title="Notebooks"
-        description="Saved collections of sources, notes, extracts, and activities. Nothing is owned by a notebook — membership is a join table, so one source can live in many places."
+        description={
+          <span className="inline-flex items-center gap-1.5">
+            Group sources, notes, extracts, and activities.
+            <Popover>
+              <PopoverTrigger
+                aria-label="About notebook membership"
+                className="rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Info className="size-4" />
+              </PopoverTrigger>
+              <PopoverContent className="max-w-72 text-sm">
+                Notebooks don&apos;t own their contents. The same item can
+                appear in any number of notebooks.
+              </PopoverContent>
+            </Popover>
+          </span>
+        }
         actions={
           <>
             {items.length > 0 ? (
