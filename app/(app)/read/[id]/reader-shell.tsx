@@ -23,13 +23,20 @@ type ReaderShellProps = {
   source: { id: string; title: string; markdown: string };
   initialExtracts: ExtractRow[];
   initialNote: NoteRow | null;
+  /** When the source is a PDF, link to the archived original in a new tab. */
+  pdfFileUrl?: string;
 };
 
 function activityPrompt(activity: ActivityPayload): string {
   return activity.type === "fill_blank" ? activity.template : activity.stem;
 }
 
-export function ReaderShell({ source, initialExtracts, initialNote }: ReaderShellProps) {
+export function ReaderShell({
+  source,
+  initialExtracts,
+  initialNote,
+  pdfFileUrl,
+}: ReaderShellProps) {
   const [extracts, setExtracts] = useState(initialExtracts);
   const [proposals, setProposals] = useState<ResolvedProposal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -288,10 +295,28 @@ export function ReaderShell({ source, initialExtracts, initialNote }: ReaderShel
     }
   }
 
+  function dismissActivityDrafts() {
+    setActivityDrafts([]);
+    setSelectedActivities(new Set());
+    setActivityStatus("Drafts cleared.");
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-8 sm:px-6 lg:px-10">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-8 sm:px-6 lg:px-10 max-lg:max-h-[45svh] max-lg:shrink-0 lg:max-h-none">
         <div className="mx-auto mt-6 max-w-2xl">
+          {pdfFileUrl ? (
+            <p className="mb-4 text-sm">
+              <a
+                href={pdfFileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Open original PDF in a new tab
+              </a>
+            </p>
+          ) : null}
           <SourcePane
             markdown={source.markdown}
             extracts={paintedExtracts}
@@ -299,7 +324,7 @@ export function ReaderShell({ source, initialExtracts, initialNote }: ReaderShel
           />
         </div>
       </div>
-      <aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
+      <aside className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
         {note && (
           <section className="mb-8 border-b pb-8">
             <div className="flex items-start justify-between gap-3">
@@ -365,13 +390,26 @@ export function ReaderShell({ source, initialExtracts, initialNote }: ReaderShel
               ))}
             </ul>
             {activityDrafts.length > 0 && (
-              <Button
-                className="mt-4 w-full"
-                onClick={() => void acceptActivityDrafts()}
-                disabled={acceptingActivities || selectedActivities.size === 0}
-              >
-                {acceptingActivities ? "Adding…" : `Add ${selectedActivities.size} to review`}
-              </Button>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  className="flex-1"
+                  onClick={() => void acceptActivityDrafts()}
+                  disabled={acceptingActivities || selectedActivities.size === 0}
+                >
+                  {acceptingActivities
+                    ? "Adding…"
+                    : `Add ${selectedActivities.size} to review`}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={dismissActivityDrafts}
+                  disabled={acceptingActivities}
+                >
+                  Reject all
+                </Button>
+              </div>
             )}
           </section>
         )}

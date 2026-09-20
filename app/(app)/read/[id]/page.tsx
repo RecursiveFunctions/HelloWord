@@ -142,8 +142,9 @@ export default async function ReadPage({
 			: `${wordLabel} · original PDF was not stored`;
 	}
 
-	const pdfViewer = ready && source.kind === "pdf" && hasPdf;
-	const markdownReader = ready && source.kind !== "pdf" && Boolean(source.markdown);
+	const pdfViewer =
+		ready && source.kind === "pdf" && hasPdf && !source.markdown;
+	const markdownReader = ready && Boolean(source.markdown);
 
 	const showTitle =
 		source.kind === "pdf" ||
@@ -174,6 +175,11 @@ export default async function ReadPage({
 						}}
 						initialExtracts={rawExtracts}
 						initialNote={note}
+						pdfFileUrl={
+							source.kind === "pdf" && hasPdf
+								? `/api/sources/${source.id}/file`
+								: undefined
+						}
 					/>
 				</div>
 			</div>

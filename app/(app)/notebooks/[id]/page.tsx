@@ -172,7 +172,6 @@ async function resolve(
       };
     }
     case "note": {
-    case "note": {
       const note = await getNote(itemId);
       if (!note) return null;
       return {
@@ -203,7 +202,6 @@ async function resolve(
           activity.source_body_hash,
         ),
       };
-    }
     }
     default:
       return null;

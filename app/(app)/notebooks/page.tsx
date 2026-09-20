@@ -3,7 +3,9 @@ import { dueCounts } from "@/lib/fsrs/queue";
 import { notebookPreviewSrc } from "@/lib/store/previews";
 import { listNotebooks } from "@/lib/store/notebooks";
 import { resolveNotebookColor } from "@/lib/themes";
+import { NewNotebook } from "./new-notebook";
 import { NotebookBrowser } from "./notebook-browser";
+import { isWorkspaceView } from "./workspace-view";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,10 @@ export default async function NotebooksPage({
     }),
   );
 
+  const fromQuery = viewParam === "list" || viewParam === "cards";
+  const initialView =
+    fromQuery && isWorkspaceView(viewParam) ? viewParam : "cards";
+
   return (
     <div>
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
@@ -48,16 +54,12 @@ export default async function NotebooksPage({
         </div>
         <NewNotebook />
       </header>
+
+      <NotebookBrowser
+        items={items}
+        initialView={initialView}
+        fromQuery={fromQuery}
+      />
     </div>
-  );
-
-  const fromQuery = viewParam === "list" || viewParam === "cards";
-
-  return (
-    <NotebookBrowser
-      items={items}
-      initialView={fromQuery ? viewParam : "cards"}
-      fromQuery={fromQuery}
-    />
   );
 }
