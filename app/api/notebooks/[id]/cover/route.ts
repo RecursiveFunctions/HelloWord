@@ -6,6 +6,7 @@ import {
 } from "@/lib/store/covers";
 import { liveNotebookCover } from "@/lib/store/previews";
 import { getNotebook, updateNotebook } from "@/lib/store/notebooks";
+import { resolveNotebookCoverColor } from "@/lib/themes";
 import { fail, notFound, ok } from "../../../_respond";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export async function GET(
 
   const image = await liveNotebookCover({
     notebookId: id,
-    color: notebook.color ?? "#c2410c",
+    color: resolveNotebookCoverColor(notebook.color),
   });
   if (!image) return notFound("Notebook cover");
   return image;

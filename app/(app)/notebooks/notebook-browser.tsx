@@ -121,7 +121,7 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
 
   return (
     <Link href={`/notebooks/${notebook.id}`}>
-      <Card className="h-full transition-shadow hover:shadow-md">
+      <Card className="h-full pt-0 transition-shadow hover:shadow-md">
         {notebook.coverSrc ? (
           <img
             src={notebook.coverSrc}

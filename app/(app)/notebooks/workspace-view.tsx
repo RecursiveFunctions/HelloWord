@@ -1,12 +1,30 @@
 "use client";
 
 import { LayoutGrid, List } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { buttonVariants } from "@/components/ui/button";
 
 export const WORKSPACE_VIEW_KEY = "helloword.workspace.view";
 
 export type WorkspaceView = "list" | "cards";
+
+const listeners = new Set<() => void>();
+
+function emit() {
+  for (const listener of listeners) listener();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function readStored(): WorkspaceView {
+  const stored = window.localStorage.getItem(WORKSPACE_VIEW_KEY);
+  return isWorkspaceView(stored) ? stored : "cards";
+}
 
 export function isWorkspaceView(
   value: string | null | undefined,
@@ -21,21 +39,13 @@ export function useWorkspaceView({
   initialView?: WorkspaceView;
   fromQuery?: boolean;
 } = {}) {
-  const [view, setView] = useState<WorkspaceView>(initialView);
+  const stored = useSyncExternalStore(subscribe, readStored, () => initialView);
+  const view = fromQuery ? initialView : stored;
 
-  useEffect(() => {
-    if (fromQuery) {
-      setView(initialView);
-      return;
-    }
-    const stored = window.localStorage.getItem(WORKSPACE_VIEW_KEY);
-    if (isWorkspaceView(stored)) setView(stored);
-  }, [fromQuery, initialView]);
-
-  function choose(next: WorkspaceView) {
-    setView(next);
+  const choose = useCallback((next: WorkspaceView) => {
     window.localStorage.setItem(WORKSPACE_VIEW_KEY, next);
-  }
+    emit();
+  }, []);
 
   return { view, choose };
 }

@@ -63,7 +63,7 @@ export function NotebookContents({
   }
 
   return (
-    <>
+    <div className="space-y-8">
       {items.length > 0 ? (
         <div className="flex justify-end">
           <WorkspaceViewToggle view={view} onChange={choose} />
@@ -119,7 +119,7 @@ export function NotebookContents({
           </section>
         );
       })}
-    </>
+    </div>
   );
 }
 

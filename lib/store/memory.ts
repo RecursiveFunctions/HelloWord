@@ -47,6 +47,11 @@ export type MemoryTables = {
 function seeded(): MemoryTables {
   return {
     sources: seedSources.map((source) => ({ ...source, ingest_error: null })),
+    extracts: seedExtracts.map((extract) => ({
+      ...extract,
+      suggestion_reason: null,
+      suggestion_concepts: [],
+    })),
     notebooks: seedNotebooks.map((notebook) => ({
       ...notebook,
       cover_storage_key: notebook.cover_storage_key ?? null,

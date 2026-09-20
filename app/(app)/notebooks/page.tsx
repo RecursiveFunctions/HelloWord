@@ -2,6 +2,7 @@ import { notebookSparkline } from "@/lib/seed";
 import { dueCounts } from "@/lib/fsrs/queue";
 import { notebookPreviewSrc } from "@/lib/store/previews";
 import { listNotebooks } from "@/lib/store/notebooks";
+import { resolveNotebookColor } from "@/lib/themes";
 import { NotebookBrowser } from "./notebook-browser";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function NotebooksPage({
 
   const items = await Promise.all(
     notebooks.map(async (notebook) => {
-      const color = notebook.color ?? "var(--color-primary)";
+      const color = resolveNotebookColor(notebook.color);
       return {
         id: notebook.id,
         name: notebook.name,
