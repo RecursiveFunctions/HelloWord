@@ -25,6 +25,16 @@ function isThemeId(value: string | null): value is ThemeId {
   return THEME_IDS.includes(value as ThemeId);
 }
 
+function initialTheme(): ThemeId {
+  if (typeof document === "undefined") return DEFAULT_THEME;
+
+  const current = document.documentElement.dataset.theme;
+  if (isThemeId(current ?? null)) return current as ThemeId;
+
+  const saved = localStorage.getItem(THEME_STORAGE_KEY);
+  return isThemeId(saved) ? saved : DEFAULT_THEME;
+}
+
 export function applyTheme(theme: ThemeId) {
   document.documentElement.dataset.theme = theme;
   document.documentElement.classList.toggle("dark", theme === "black");
@@ -44,15 +54,7 @@ export function ColorWheel() {
   const labelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
-
-  useEffect(() => {
-    const current = document.documentElement.dataset.theme;
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (isThemeId(current ?? null)) setTheme(current as ThemeId);
-    else if (isThemeId(saved)) setTheme(saved);
-    else setTheme(DEFAULT_THEME);
-  }, []);
+  const [theme, setTheme] = useState<ThemeId>(initialTheme);
 
   useEffect(() => {
     if (!open) return;

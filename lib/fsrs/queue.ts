@@ -6,7 +6,7 @@
  * how fast cards become due, not how dueness is decided.
  */
 import { dbConfigured, query } from "@/lib/db";
-import { noteById } from "@/lib/seed";
+import { listNotes } from "@/lib/store/notes";
 import { getProfile, listActivities, listSchedules } from "@/lib/store/review";
 import { listNotebookItems, listNotebooks } from "@/lib/store/notebooks";
 import { emptySchedule, reviewNow } from "./engine";
@@ -97,10 +97,9 @@ async function noteTitles(ids: string[]): Promise<Map<string, string>> {
     );
     for (const row of rows) out.set(row.id, row.title);
   }
-  // Seed covers the no-database case, and backfills anything the query missed.
-  for (const id of ids) {
-    if (!out.has(id)) out.set(id, noteById(id)?.title ?? "Untitled note");
-  }
+  const stored = await listNotes();
+  const byId = new Map(stored.map((note) => [note.id, note.title]));
+  for (const id of ids) if (!out.has(id)) out.set(id, byId.get(id) ?? "Untitled note");
   return out;
 }
 
@@ -113,12 +112,9 @@ async function noteHashes(ids: string[]): Promise<Map<string, string>> {
     );
     for (const row of rows) out.set(row.id, row.body_hash);
   }
-  for (const id of ids) {
-    if (!out.has(id)) {
-      const hash = noteById(id)?.body_hash;
-      if (hash) out.set(id, hash);
-    }
-  }
+  const stored = await listNotes();
+  const byId = new Map(stored.map((note) => [note.id, note.body_hash]));
+  for (const id of ids) if (!out.has(id) && byId.has(id)) out.set(id, byId.get(id)!);
   return out;
 }
 

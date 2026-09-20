@@ -1,5 +1,7 @@
-import { activities, extracts, notes } from "@/lib/seed";
+import { listExtracts } from "@/lib/store/extracts";
 import { listNotebooks } from "@/lib/store/notebooks";
+import { listNotes } from "@/lib/store/notes";
+import { listActivities } from "@/lib/store/review";
 import { listSources } from "@/lib/store/sources";
 import { AddSource } from "./add-source";
 import { LibraryBrowser } from "./library-browser";
@@ -14,11 +16,12 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
-  // Sources are workstream A's, so they come from the store. Notes, extracts,
-  // and activities still read the seed until B, C, and D land their tables.
-  const [sources, notebooks] = await Promise.all([
+  const [sources, notebooks, notes, extracts, activities] = await Promise.all([
     listSources(),
     listNotebooks(),
+    listNotes(),
+    listExtracts(),
+    listActivities(),
   ]);
 
   const items: LibraryItem[] = [

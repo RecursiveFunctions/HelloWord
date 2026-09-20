@@ -9,8 +9,9 @@ import {
 } from "@/components/ui/empty";
 import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
 import { parseBlocks } from "@/lib/editor/blocks";
-import { notes } from "@/lib/seed";
+import { extractNotes, notes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
+import { getNote } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
@@ -141,26 +142,31 @@ export default async function ReadPage({
 			: `${wordLabel} · original PDF was not stored`;
 	}
 
-	const pdfViewer = ready && source.kind === "pdf" && hasPdf;
-	const markdownReader = ready && source.kind !== "pdf" && Boolean(source.markdown);
+	const pdfViewer =
+		ready && source.kind === "pdf" && hasPdf && !source.markdown;
+	const markdownReader = ready && Boolean(source.markdown);
 
 	const showTitle =
 		source.kind === "pdf" ||
 		!source.markdown ||
 		!documentLeadsWithTitle(source.markdown, source.title);
+	const linkedNoteId = extractNotes.find(({ extract_id }) =>
+		rawExtracts.some(({ id: extractId }) => extractId === extract_id),
+	)?.note_id;
+	const note = linkedNoteId ? await getNote(linkedNoteId) : null;
 
 	if (markdownReader) {
 		return (
 			<div
 				data-full-bleed
-				className="flex h-full min-h-0 flex-col overflow-hidden"
+				className="flex min-h-0 flex-1 flex-col overflow-hidden"
 			>
 				<SourceHeader
 					source={source}
 					detail={detail}
 					showTitle={showTitle}
 				/>
-				<div className="min-h-0 flex-1">
+				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<ReaderShell
 						source={{
 							id: source.id,
@@ -168,6 +174,12 @@ export default async function ReadPage({
 							markdown: source.markdown!,
 						}}
 						initialExtracts={rawExtracts}
+						initialNote={note}
+						pdfFileUrl={
+							source.kind === "pdf" && hasPdf
+								? `/api/sources/${source.id}/file`
+								: undefined
+						}
 					/>
 				</div>
 			</div>
@@ -177,7 +189,7 @@ export default async function ReadPage({
 	return (
 		<div
 			data-full-bleed
-			className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row"
+			className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row"
 		>
 			<div
 				className={cn(

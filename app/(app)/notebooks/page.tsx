@@ -4,6 +4,7 @@ import { notebookPreviewSrc } from "@/lib/store/previews";
 import { listNotebooks } from "@/lib/store/notebooks";
 import { resolveNotebookColor } from "@/lib/themes";
 import { NotebookBrowser } from "./notebook-browser";
+import { isWorkspaceView } from "./workspace-view";
 
 export const dynamic = "force-dynamic";
 
@@ -38,11 +39,13 @@ export default async function NotebooksPage({
   );
 
   const fromQuery = viewParam === "list" || viewParam === "cards";
+  const initialView =
+    fromQuery && isWorkspaceView(viewParam) ? viewParam : "cards";
 
   return (
     <NotebookBrowser
       items={items}
-      initialView={fromQuery ? viewParam : "cards"}
+      initialView={initialView}
       fromQuery={fromQuery}
     />
   );

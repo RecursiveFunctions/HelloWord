@@ -3,9 +3,13 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { resolveExact } from "@/lib/anchor/selector";
 import type { ExtractProposal, SelectorBundle } from "@/lib/contracts";
-import type { ExtractRow } from "@/lib/store/types";
+import type { ActivityPayload } from "@/lib/contracts/activity";
+import type { ExtractRow, NoteRow } from "@/lib/store/types";
 import { SourcePane, type PaintedExtract } from "./source-pane";
 
 type ResolvedProposal = ExtractProposal & {
@@ -18,14 +22,31 @@ type ResolvedProposal = ExtractProposal & {
 type ReaderShellProps = {
   source: { id: string; title: string; markdown: string };
   initialExtracts: ExtractRow[];
+  initialNote: NoteRow | null;
+  /** When the source is a PDF, link to the archived original in a new tab. */
+  pdfFileUrl?: string;
 };
 
-export function ReaderShell({ source, initialExtracts }: ReaderShellProps) {
+function activityPrompt(activity: ActivityPayload): string {
+  return activity.type === "fill_blank" ? activity.template : activity.stem;
+}
+
+export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }: ReaderShellProps) {
   const [extracts, setExtracts] = useState(initialExtracts);
   const [proposals, setProposals] = useState<ResolvedProposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
   const [status, setStatus] = useState<string>();
+  const [note, setNote] = useState(initialNote);
+  const [noteTitle, setNoteTitle] = useState(initialNote?.title ?? "");
+  const [noteBody, setNoteBody] = useState(initialNote?.body_md ?? "");
+  const [noteStatus, setNoteStatus] = useState<string>();
+  const [savingNote, setSavingNote] = useState(false);
+  const [activityDrafts, setActivityDrafts] = useState<ActivityPayload[]>([]);
+  const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
+  const [activityStatus, setActivityStatus] = useState<string>();
+  const [generatingActivities, setGeneratingActivities] = useState(false);
+  const [acceptingActivities, setAcceptingActivities] = useState(false);
 
   const paintedExtracts = useMemo<PaintedExtract[]>(
     () =>
@@ -163,10 +184,134 @@ export function ReaderShell({ source, initialExtracts }: ReaderShellProps) {
     setAutoMode(false);
   }
 
+  async function saveNote(): Promise<NoteRow | null> {
+    if (!note) return null;
+    setSavingNote(true);
+    setNoteStatus(undefined);
+    try {
+      const response = await fetch(`/api/notes/${note.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: noteTitle, body_md: noteBody }),
+      });
+      const body = (await response.json()) as NoteRow | { error?: string };
+      if (!response.ok || !("id" in body)) {
+        throw new Error("error" in body ? body.error : "Could not save note.");
+      }
+      setNote(body);
+      setNoteTitle(body.title);
+      setNoteBody(body.body_md);
+      setActivityDrafts([]);
+      setSelectedActivities(new Set());
+      setNoteStatus("Saved. Existing activities derived from the older body may now be stale.");
+      return body;
+    } catch (error) {
+      setNoteStatus(error instanceof Error ? error.message : "Could not save note.");
+      return null;
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function generateActivityDrafts() {
+    if (!note) return;
+    let currentNote = note;
+    if (noteTitle !== note.title || noteBody !== note.body_md) {
+      const saved = await saveNote();
+      if (!saved) return;
+      currentNote = saved;
+    }
+    setGeneratingActivities(true);
+    setActivityStatus(undefined);
+    try {
+      const response = await fetch("/api/ai/activities", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          noteId: currentNote.id,
+          types: ["mcq", "select_all", "fill_blank", "closed"],
+          count: 4,
+        }),
+      });
+      const body = (await response.json()) as {
+        activities?: ActivityPayload[];
+        error?: string;
+        detail?: string;
+      };
+      if (!response.ok || !body.activities) {
+        throw new Error(body.detail || body.error || "Could not generate activities.");
+      }
+      setActivityDrafts(body.activities);
+      setSelectedActivities(new Set(body.activities.map((_, index) => index)));
+      setActivityStatus(`${body.activities.length} drafts ready. Select the ones to keep.`);
+    } catch (error) {
+      setActivityStatus(error instanceof Error ? error.message : "Could not generate activities.");
+    } finally {
+      setGeneratingActivities(false);
+    }
+  }
+
+  function toggleActivity(index: number, checked: boolean) {
+    setSelectedActivities((current) => {
+      const next = new Set(current);
+      if (checked) next.add(index);
+      else next.delete(index);
+      return next;
+    });
+  }
+
+  async function acceptActivityDrafts() {
+    if (!note) return;
+    const chosen = activityDrafts.filter((_, index) => selectedActivities.has(index));
+    if (!chosen.length) return;
+    setAcceptingActivities(true);
+    setActivityStatus(undefined);
+    try {
+      const response = await fetch("/api/ai/activities/accept", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          note_id: note.id,
+          source_body_hash: note.body_hash,
+          activities: chosen,
+        }),
+      });
+      const body = (await response.json()) as { activities?: unknown[]; error?: string };
+      if (!response.ok || !body.activities) {
+        throw new Error(body.error || "Could not accept activities.");
+      }
+      setActivityDrafts([]);
+      setSelectedActivities(new Set());
+      setActivityStatus(`${body.activities.length} activities added to the review queue.`);
+    } catch (error) {
+      setActivityStatus(error instanceof Error ? error.message : "Could not accept activities.");
+    } finally {
+      setAcceptingActivities(false);
+    }
+  }
+
+  function dismissActivityDrafts() {
+    setActivityDrafts([]);
+    setSelectedActivities(new Set());
+    setActivityStatus("Drafts cleared.");
+  }
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-8 sm:px-6 lg:px-10">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full lg:flex-row">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6 lg:px-10 max-lg:max-h-[45svh] max-lg:shrink-0 lg:max-h-none">
         <div className="mx-auto mt-6 max-w-2xl">
+          {pdfFileUrl ? (
+            <p className="mb-4 text-sm">
+              <a
+                href={pdfFileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Open original PDF in a new tab
+              </a>
+            </p>
+          ) : null}
           <SourcePane
             markdown={source.markdown}
             extracts={paintedExtracts}
@@ -174,7 +319,95 @@ export function ReaderShell({ source, initialExtracts }: ReaderShellProps) {
           />
         </div>
       </div>
-      <aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
+      <aside className="flex min-h-0 min-w-0 w-full flex-1 shrink-0 flex-col overflow-y-auto overscroll-y-contain border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 max-h-[min(40svh,24rem)] lg:max-h-none lg:h-full lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
+        {note && (
+          <section className="mb-8 border-b pb-8">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-heading text-lg">Study note</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Activities are generated from this editable markdown, not the source.
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => void saveNote()} disabled={savingNote}>
+                {savingNote ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            <Input
+              className="mt-4"
+              aria-label="Note title"
+              value={noteTitle}
+              onChange={(event) => setNoteTitle(event.target.value)}
+            />
+            <Textarea
+              className="mt-3 min-h-44 font-mono text-xs"
+              aria-label="Note markdown"
+              value={noteBody}
+              onChange={(event) => setNoteBody(event.target.value)}
+            />
+            {noteStatus && <p className="mt-2 text-xs text-muted-foreground">{noteStatus}</p>}
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-base">Nemotron activities</h3>
+                <p className="text-xs text-muted-foreground">Four formats, previewed before persistence.</p>
+              </div>
+              <Button onClick={() => void generateActivityDrafts()} disabled={generatingActivities || savingNote}>
+                {generatingActivities ? "Thinking…" : activityDrafts.length ? "Regenerate" : "Generate"}
+              </Button>
+            </div>
+            {activityStatus && <p className="mt-3 text-xs text-muted-foreground">{activityStatus}</p>}
+            <ul className="mt-4 space-y-3">
+              {activityDrafts.map((activity, index) => (
+                <li key={`${activity.type}-${index}`} className="rounded-lg border bg-card p-3 text-sm">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <Checkbox
+                      checked={selectedActivities.has(index)}
+                      onCheckedChange={(checked) => toggleActivity(index, checked === true)}
+                      aria-label={`Select ${activity.type} activity`}
+                    />
+                    <span className="min-w-0">
+                      <Badge variant="outline">{activity.type.replace("_", " ")}</Badge>
+                      <span className="mt-2 block font-medium">{activityPrompt(activity)}</span>
+                      {activity.type === "mcq" && (
+                        <span className="mt-2 block text-xs text-muted-foreground">
+                          {activity.options.map((option, optionIndex) => `${optionIndex + 1}. ${option}`).join(" · ")}
+                        </span>
+                      )}
+                      {activity.type === "select_all" && (
+                        <span className="mt-2 block text-xs text-muted-foreground">{activity.options.join(" · ")}</span>
+                      )}
+                      {activity.type === "closed" && (
+                        <span className="mt-2 block text-xs text-muted-foreground">Answer: {activity.answer}</span>
+                      )}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {activityDrafts.length > 0 && (
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  className="flex-1"
+                  onClick={() => void acceptActivityDrafts()}
+                  disabled={acceptingActivities || selectedActivities.size === 0}
+                >
+                  {acceptingActivities
+                    ? "Adding…"
+                    : `Add ${selectedActivities.size} to review`}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={dismissActivityDrafts}
+                  disabled={acceptingActivities}
+                >
+                  Reject all
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-heading text-lg">Nemotron extracts</h2>
