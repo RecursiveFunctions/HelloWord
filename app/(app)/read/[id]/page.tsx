@@ -7,14 +7,16 @@ import {
 	EmptyHeader,
 	EmptyTitle,
 } from "@/components/ui/empty";
+import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
 import { parseBlocks } from "@/lib/editor/blocks";
+import { notes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
 import { cn } from "@/lib/utils";
 import { PdfFrame } from "./pdf-frame";
-import { SourcePane } from "./source-pane";
+import { ReaderShell } from "./reader-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -61,13 +63,14 @@ function SourceHeader({
 	);
 }
 
-function NoteRail() {
+/** Placeholder rail while PDFs use the iframe viewer instead of SourcePane. */
+function PdfNoteRail() {
 	return (
 		<aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
 			<h2 className="font-heading text-lg">Note editor</h2>
 			<p className="mt-2 text-sm text-muted-foreground">
-				Tiptap lands here next. Seeded notes and C&apos;s fixture proposals
-				sit below so the rail is not empty.
+				Tiptap lands here next. Seeded notes and fixture proposals sit below so
+				the rail is not empty.
 			</p>
 			<div className="mt-6 space-y-3">
 				{notes.slice(0, 3).map((note) => (
@@ -100,10 +103,6 @@ function NoteRail() {
 					</li>
 				))}
 			</ul>
-			<p className="mt-4 text-xs text-muted-foreground">
-				Swap this JSON for{" "}
-				<code className="font-mono">POST /api/ai/extracts</code> in wave 2.
-			</p>
 		</aside>
 	);
 }
@@ -113,125 +112,137 @@ export default async function ReadPage({
 }: {
 	params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const [source, rawExtracts] = await Promise.all([
-    getSource(id),
-    listSourceExtracts(id),
-  ]);
-  if (!source) notFound();
+	const { id } = await params;
+	const [source, rawExtracts] = await Promise.all([
+		getSource(id),
+		listSourceExtracts(id),
+	]);
+	if (!source) notFound();
 
-  const sourceExtracts = (rawExtracts ?? [])
-    .filter((e) => e.anchor_status !== "detached")
-    .map((e) => ({
-      id: e.id,
-      start: e.selector.start,
-      end: e.selector.end,
-      orphaned: e.anchor_status === "orphaned",
-    }));
+	const anchoredExtracts = rawExtracts.filter(
+		(e) => e.anchor_status !== "detached",
+	);
 
-  const ready = source.ingest_status === "ready";
-  const hasPdf = source.kind === "pdf" && (await storedPdfExists(source.storage_key));
-  const wordLabel = source.word_count
-    ? `${source.word_count.toLocaleString()} words`
-    : "word count pending";
+	const ready = source.ingest_status === "ready";
+	const hasPdf = source.kind === "pdf" && (await storedPdfExists(source.storage_key));
+	const wordLabel = source.word_count
+		? `${source.word_count.toLocaleString()} words`
+		: "word count pending";
 
-  let detail = `${wordLabel} · ${sourceExtracts.length} extracts anchored`;
-  if (!ready) {
-    detail =
-      source.ingest_status === "failed"
-        ? source.ingest_error ?? "Ingest failed."
-        : `Ingest ${source.ingest_status}`;
-  } else if (source.kind === "pdf") {
-    detail = hasPdf
-      ? `${wordLabel} · original PDF`
-      : `${wordLabel} · original PDF was not stored`;
-  }
+	let detail = `${wordLabel} · ${anchoredExtracts.length} extracts anchored`;
+	if (!ready) {
+		detail =
+			source.ingest_status === "failed"
+				? (source.ingest_error ?? "Ingest failed.")
+				: `Ingest ${source.ingest_status}`;
+	} else if (source.kind === "pdf") {
+		detail = hasPdf
+			? `${wordLabel} · original PDF`
+			: `${wordLabel} · original PDF was not stored`;
+	}
 
-  const pdfViewer = ready && source.kind === "pdf" && hasPdf;
+	const pdfViewer = ready && source.kind === "pdf" && hasPdf;
+	const markdownReader = ready && source.kind !== "pdf" && Boolean(source.markdown);
 
-  return (
-    <div
-      data-full-bleed
-      className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row"
-    >
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col",
-          pdfViewer &&
-            "max-lg:min-h-[58svh] max-lg:shrink-0 lg:min-h-0",
-        )}
-      >
-        <SourceHeader
-          source={source}
-          detail={detail}
-          showTitle={
-            source.kind === "pdf" ||
-            !source.markdown ||
-            !documentLeadsWithTitle(source.markdown, source.title)
-          }
-        />
+	const showTitle =
+		source.kind === "pdf" ||
+		!source.markdown ||
+		!documentLeadsWithTitle(source.markdown, source.title);
 
-        <div
-          className={cn(
-            "relative min-h-0 flex-1 basis-0",
-            pdfViewer && "min-h-[12rem]",
-          )}
-        >
-          {!ready ? (
-            <Empty className="h-full">
-              <EmptyHeader>
-                <EmptyTitle>
-                  {source.ingest_status === "failed"
-                    ? "This source could not be extracted"
-                    : "Extracting this source"}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {source.ingest_status === "failed"
-                    ? (source.ingest_error ??
-                        "Ingest failed. The original file was kept if the upload succeeded.")
-                    : "Ingest is still running. The original file will open here when it is ready."}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : source.kind === "pdf" && hasPdf ? (
-            <PdfFrame
-              src={`/api/sources/${source.id}/file`}
-              title={source.title}
-            />
-          ) : source.kind === "pdf" ? (
-            <Empty className="h-full">
-              <EmptyHeader>
-                <EmptyTitle>Original PDF is not available</EmptyTitle>
-                <EmptyDescription>
-                  This source has extracted text, but the original file was
-                  never archived. Upload the PDF again to open the pages here.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : source.markdown ? (
-            <div className="h-full overflow-auto px-4 pb-8 sm:px-6 lg:px-10">
-              <div className="max-w-2xl">
-                <SourcePane
-                  markdown={source.markdown}
-                  extracts={sourceExtracts}
-                />
-              </div>
-            </div>
-          ) : (
-            <Empty className="h-full">
-              <EmptyHeader>
-                <EmptyTitle>No markdown to read</EmptyTitle>
-                <EmptyDescription>
-                  A ready source should always have markdown. Try ingesting
-                  this URL again from the Library.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
-        </div>
-      </div>
+	if (markdownReader) {
+		return (
+			<div
+				data-full-bleed
+				className="flex h-full min-h-0 flex-col overflow-hidden"
+			>
+				<SourceHeader
+					source={source}
+					detail={detail}
+					showTitle={showTitle}
+				/>
+				<div className="min-h-0 flex-1">
+					<ReaderShell
+						source={{
+							id: source.id,
+							title: source.title,
+							markdown: source.markdown!,
+						}}
+						initialExtracts={rawExtracts}
+					/>
+				</div>
+			</div>
+		);
+	}
 
-      <NoteRail />
-    </div>
-  );
+	return (
+		<div
+			data-full-bleed
+			className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row"
+		>
+			<div
+				className={cn(
+					"flex min-h-0 min-w-0 flex-1 flex-col",
+					pdfViewer && "max-lg:min-h-[58svh] max-lg:shrink-0 lg:min-h-0",
+				)}
+			>
+				<SourceHeader
+					source={source}
+					detail={detail}
+					showTitle={showTitle}
+				/>
+
+				<div
+					className={cn(
+						"relative min-h-0 flex-1 basis-0",
+						pdfViewer && "min-h-[12rem]",
+					)}
+				>
+					{!ready ? (
+						<Empty className="h-full">
+							<EmptyHeader>
+								<EmptyTitle>
+									{source.ingest_status === "failed"
+										? "This source could not be extracted"
+										: "Extracting this source"}
+								</EmptyTitle>
+								<EmptyDescription>
+									{source.ingest_status === "failed"
+										? (source.ingest_error ??
+											"Ingest failed. The original file was kept if the upload succeeded.")
+										: "Ingest is still running. The original file will open here when it is ready."}
+								</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					) : pdfViewer ? (
+						<PdfFrame
+							src={`/api/sources/${source.id}/file`}
+							title={source.title}
+						/>
+					) : source.kind === "pdf" ? (
+						<Empty className="h-full">
+							<EmptyHeader>
+								<EmptyTitle>Original PDF is not available</EmptyTitle>
+								<EmptyDescription>
+									This source has extracted text, but the original file was
+									never archived. Upload the PDF again to open the pages here.
+								</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					) : (
+						<Empty className="h-full">
+							<EmptyHeader>
+								<EmptyTitle>No markdown to read</EmptyTitle>
+								<EmptyDescription>
+									A ready source should always have markdown. Try ingesting
+									this URL again from the Library.
+								</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					)}
+				</div>
+			</div>
+
+			{pdfViewer ? <PdfNoteRail /> : null}
+		</div>
+	);
 }
