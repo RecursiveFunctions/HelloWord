@@ -12,12 +12,12 @@ export default async function AppLayout({
   const { total: dueCount } = await dueCounts();
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-svh min-h-0 flex-col">
       <AppTopbar dueCount={dueCount} />
-      <div className="min-w-0 flex-1 bg-background">
-        {/* The reader needs the full width for two panes, so a page can opt out
-            of the reading-width container by marking its root full-bleed. */}
-        <div className="mx-auto w-full max-w-5xl px-8 py-8 has-[[data-full-bleed]]:max-w-none has-[[data-full-bleed]]:p-0">
+      {/* Remaining viewport under the top bar. Ordinary pages scroll here;
+          a full-bleed reader fills the box so the PDF iframe has a real height. */}
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-background has-[[data-full-bleed]]:flex has-[[data-full-bleed]]:flex-col has-[[data-full-bleed]]:overflow-hidden">
+        <div className="mx-auto w-full max-w-5xl px-8 py-8 has-[[data-full-bleed]]:flex has-[[data-full-bleed]]:min-h-0 has-[[data-full-bleed]]:flex-1 has-[[data-full-bleed]]:max-w-none has-[[data-full-bleed]]:overflow-hidden has-[[data-full-bleed]]:p-0">
           {children}
         </div>
       </div>

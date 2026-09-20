@@ -13,6 +13,7 @@ import { parseBlocks } from "@/lib/editor/blocks";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
+import { cn } from "@/lib/utils";
 import { PdfFrame } from "./pdf-frame";
 import { SourcePane } from "./source-pane";
 
@@ -38,8 +39,8 @@ function SourceHeader({
 	showTitle: boolean;
 }) {
 	return (
-		<header className="shrink-0 px-10 py-6">
-			<p className="text-sm text-muted-foreground">
+		<header className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 lg:px-10 lg:py-5">
+			<p className="truncate text-sm text-muted-foreground">
 				<Link href="/notebooks" className="hover:underline">
 					HelloWord
 				</Link>
@@ -52,18 +53,18 @@ function SourceHeader({
 				{source.ingest_method ? ` · ${source.ingest_method}` : ""}
 			</p>
 			{showTitle ? (
-				<h1 className="mt-2 font-heading text-3xl tracking-tight">
+				<h1 className="mt-1 line-clamp-2 font-heading text-xl tracking-tight sm:mt-2 sm:text-2xl lg:text-3xl">
 					{source.title}
 				</h1>
 			) : null}
-			<p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+			<p className="mt-1 truncate text-xs text-muted-foreground">{detail}</p>
 		</header>
 	);
 }
 
 function NoteRail() {
 	return (
-		<aside className="w-[28rem] shrink-0 overflow-auto border-l bg-sidebar px-5 py-8">
+		<aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
 			<h2 className="font-heading text-lg">Note editor</h2>
 			<p className="mt-2 text-sm text-muted-foreground">
 				Tiptap lands here next. Seeded notes and C&apos;s fixture proposals
@@ -144,12 +145,20 @@ export default async function ReadPage({
 			: `${wordLabel} · original PDF was not stored`;
 	}
 
+	const pdfViewer = ready && source.kind === "pdf" && hasPdf;
+
 	return (
 		<div
 			data-full-bleed
-			className="flex min-h-[calc(100svh-var(--topbar-h))]"
+			className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row"
 		>
-			<div className="min-w-0 flex-1 flex-col">
+			<div
+				className={cn(
+					"flex min-h-0 min-w-0 flex-1 flex-col",
+					pdfViewer &&
+						"max-lg:min-h-[58svh] max-lg:shrink-0 lg:min-h-0",
+				)}
+			>
 				<SourceHeader
 					source={source}
 					detail={detail}
@@ -160,7 +169,12 @@ export default async function ReadPage({
 					}
 				/>
 
-				<div className="min-h-0 flex-1">
+				<div
+					className={cn(
+						"relative min-h-0 flex-1 basis-0",
+						pdfViewer && "min-h-[12rem]",
+					)}
+				>
 					{!ready ? (
 						<Empty className="h-full">
 							<EmptyHeader>
@@ -193,7 +207,7 @@ export default async function ReadPage({
 							</EmptyHeader>
 						</Empty>
 					) : source.markdown ? (
-						<div className="h-full overflow-auto px-10 pb-8">
+						<div className="h-full overflow-auto px-4 pb-8 sm:px-6 lg:px-10">
 							<div className="max-w-2xl">
 								<SourcePane
 									markdown={source.markdown}
@@ -214,7 +228,8 @@ export default async function ReadPage({
 					)}
 				</div>
 			</div>
+
+			<NoteRail />
 		</div>
 	);
-
 }
