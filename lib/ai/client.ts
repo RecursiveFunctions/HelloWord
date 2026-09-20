@@ -3,15 +3,15 @@ import { z } from "zod";
 import { AiProviderError, AiUnconfiguredError } from "./errors";
 import { parseJsonLoose } from "./json";
 import {
-  MAX_RETRY_AFTER_MS,
   type Provider,
   type ProviderId,
   chatProviders,
   describeError,
   isFailoverWorthy,
+  isTransientProviderError,
   looksLikeGuidedJsonRejection,
   markGuidedJsonUnsupported,
-  retryAfterMs,
+  retryDelayMs,
   sleep,
   supportsGuidedJson,
 } from "./provider";
@@ -41,8 +41,9 @@ export type AiResult<T> = {
   guidedJson: boolean;
 };
 
-/** Guided downgrade, first parse, one repair. */
-const CALL_BUDGET_PER_PROVIDER = 3;
+/** Includes transport retries, guided downgrade, and one structured repair. */
+const CALL_BUDGET_PER_PROVIDER = 4;
+const MAX_TRANSPORT_RETRIES = 2;
 
 const jsonSchemaCache = new WeakMap<z.ZodType, Record<string, unknown> | null>();
 
@@ -73,7 +74,7 @@ function formatIssues(error: z.ZodError): string {
     .join("; ");
 }
 
-type Repair = { previous: string; complaint: string };
+type Repair = { previous: string; complaint: string; truncated: boolean };
 
 function buildMessages(
   req: ChatJsonRequest,
@@ -87,11 +88,15 @@ function buildMessages(
     messages.push({ role: "assistant", content: repair.previous.slice(0, 4000) });
     messages.push({
       role: "user",
-      content: `That response did not validate: ${repair.complaint}\n\nReturn corrected JSON only. No prose, no code fences, no commentary.`,
+      content: repair.truncated
+        ? "That JSON response was cut off before it finished. Return the complete JSON object again, more compactly. Preserve the requested shape and omit nonessential verbosity. No prose, no code fences, no commentary."
+        : `That response did not validate: ${repair.complaint}\n\nReturn corrected JSON only. No prose, no code fences, no commentary.`,
     });
   }
   return messages;
 }
+
+type Completion = { raw: string; finishReason: string | null };
 
 async function complete(
   provider: Provider,
@@ -99,7 +104,7 @@ async function complete(
   req: ChatJsonRequest,
   guided: boolean,
   repair: Repair | undefined,
-): Promise<string> {
+): Promise<Completion> {
   const body: Record<string, unknown> = {
     model: provider.model,
     messages: buildMessages(req, repair),
@@ -123,7 +128,38 @@ async function complete(
   const response = await provider.client.chat.completions.create(
     body as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
   );
-  return response.choices[0]?.message?.content ?? "";
+  const choice = response.choices[0];
+  return {
+    raw: choice?.message?.content ?? "",
+    finishReason: choice?.finish_reason ?? null,
+  };
+}
+
+function looksTruncated(raw: string, finishReason: string | null): boolean {
+  if (finishReason === "length") return true;
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  if (/[,:[{]\s*$/.test(trimmed)) return true;
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (const char of trimmed) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\" && quoted) {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && (char === "{" || char === "[")) depth++;
+    if (!quoted && (char === "}" || char === "]")) depth--;
+  }
+  return quoted || depth > 0;
 }
 
 export async function chatJson<T>(
@@ -139,30 +175,33 @@ export async function chatJson<T>(
     let guided = supportsGuidedJson(provider.id);
     let repair: Repair | undefined;
     let attempts = 0;
+    let transportRetries = 0;
 
     for (let call = 0; call < CALL_BUDGET_PER_PROVIDER; call++) {
       attempts++;
-      let raw: string;
+      let completion: Completion;
       try {
-        raw = await complete(provider, schema, req, guided, repair);
+        completion = await complete(provider, schema, req, guided, repair);
       } catch (error) {
         if (guided && looksLikeGuidedJsonRejection(error)) {
           markGuidedJsonUnsupported(provider.id);
           guided = false;
           continue;
         }
+        if (isTransientProviderError(error) && transportRetries < MAX_TRANSPORT_RETRIES) {
+          await sleep(retryDelayMs(error, transportRetries));
+          transportRetries++;
+          continue;
+        }
         if (isFailoverWorthy(error)) {
-          const wait = retryAfterMs(error);
-          if (wait !== undefined && wait <= MAX_RETRY_AFTER_MS) {
-            await sleep(wait);
-            continue;
-          }
           failures.push(`${provider.label}: ${describeError(error)}`);
           break;
         }
         throw error;
       }
 
+      transportRetries = 0;
+      const { raw, finishReason } = completion;
       const loose = parseJsonLoose(raw);
       let complaint: string;
       if (loose.ok) {
@@ -181,11 +220,18 @@ export async function chatJson<T>(
         complaint = loose.reason;
       }
 
+      const truncated = looksTruncated(raw, finishReason);
       if (repair) {
-        failures.push(`${provider.label}: invalid ${req.name} twice (${complaint})`);
+        failures.push(
+          `${provider.label}: invalid ${req.name} after structured repair (${truncated ? "truncated output" : complaint})`,
+        );
         break;
       }
-      repair = { previous: raw, complaint };
+      repair = { previous: raw, complaint, truncated };
+    }
+
+    if (attempts >= CALL_BUDGET_PER_PROVIDER && failures.at(-1)?.startsWith(provider.label) !== true) {
+      failures.push(`${provider.label}: ${req.name} exhausted its call budget`);
     }
   }
 

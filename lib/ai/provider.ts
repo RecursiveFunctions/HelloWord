@@ -35,8 +35,10 @@ function embedModel(): string {
     : "nvidia/nemotron-3-embed-1b";
 }
 
-/** Longest `Retry-After` we will sit through before moving to the next provider. */
-export const MAX_RETRY_AFTER_MS = 2_000;
+/** Longest delay we will sit through before moving to the next provider. */
+export const MAX_RETRY_DELAY_MS = 2_000;
+const BASE_RETRY_DELAY_MS = 250;
+const TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
 
 const clients = new Map<string, OpenAI>();
 
@@ -101,20 +103,28 @@ export function embeddingProvider(): Provider | null {
   };
 }
 
-function statusOf(error: unknown): number | undefined {
+export function statusOf(error: unknown): number | undefined {
   return error instanceof APIError ? error.status : undefined;
 }
 
 /**
- * 401 and 403 are in here because a fresh NVIDIA key has been observed
- * returning 403 on /chat/completions while GET /v1/models returns 200.
- * A dead primary key should move us to the failover, not fail the request.
+ * Only overload and gateway failures are worth repeating against the same
+ * provider. Authentication, model and validation failures can still fail over,
+ * but retrying them first only burns the request budget.
+ */
+export function isTransientProviderError(error: unknown): boolean {
+  const status = statusOf(error);
+  return status === undefined || TRANSIENT_STATUSES.has(status);
+}
+
+/**
+ * 401 and 403 are included because a key can work on a model-list endpoint but
+ * not on chat completions. A provider-specific failure should not prevent the
+ * configured secondary provider from serving the request.
  */
 export function isFailoverWorthy(error: unknown): boolean {
   const status = statusOf(error);
-  if (status === undefined) return true; // connection reset, timeout, DNS
-  if (status === 429) return true;
-  if (status >= 500) return true;
+  if (isTransientProviderError(error)) return true;
   return status === 401 || status === 403 || status === 404 || status === 408;
 }
 
@@ -126,6 +136,17 @@ export function retryAfterMs(error: unknown): number | undefined {
   if (Number.isFinite(seconds)) return seconds * 1000;
   const date = Date.parse(header);
   return Number.isFinite(date) ? Math.max(0, date - Date.now()) : undefined;
+}
+
+/** Bounded exponential backoff with jitter, overridden by a short Retry-After. */
+export function retryDelayMs(error: unknown, retry: number): number {
+  const requested = retryAfterMs(error);
+  if (requested !== undefined) {
+    return Math.min(MAX_RETRY_DELAY_MS, Math.max(0, requested));
+  }
+  const exponential = BASE_RETRY_DELAY_MS * 2 ** Math.max(0, retry);
+  const jitter = 0.75 + Math.random() * 0.5;
+  return Math.min(MAX_RETRY_DELAY_MS, Math.round(exponential * jitter));
 }
 
 const GUIDED_JSON_REJECTION =
@@ -157,9 +178,10 @@ export function markGuidedJsonUnsupported(id: ProviderId): void {
 
 export function describeError(error: unknown): string {
   if (error instanceof APIError) {
-    return `${error.status ?? "no status"} ${error.message}`.slice(0, 300);
+    return `HTTP ${error.status ?? "unknown"}`;
   }
-  return (error instanceof Error ? error.message : String(error)).slice(0, 300);
+  const name = error instanceof Error ? error.name : "UnknownError";
+  return name.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 80) || "UnknownError";
 }
 
 export function sleep(ms: number): Promise<void> {

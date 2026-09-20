@@ -11,6 +11,7 @@
  */
 import {
   activities as seedActivities,
+  extracts as seedExtracts,
   notebookItems as seedNotebookItems,
   notebooks as seedNotebooks,
   schedulerProfile as seedProfile,
@@ -20,6 +21,7 @@ import {
 import { DEFAULT_FEEDS } from "./default-feeds";
 import type {
   ActivityRow,
+  ExtractRow,
   FeedRow,
   NotebookItemRow,
   NotebookRow,
@@ -31,6 +33,7 @@ import type {
 
 export type MemoryTables = {
   sources: SourceRow[];
+  extracts: ExtractRow[];
   notebooks: NotebookRow[];
   notebookItems: NotebookItemRow[];
   feeds: FeedRow[];
@@ -43,6 +46,11 @@ export type MemoryTables = {
 function seeded(): MemoryTables {
   return {
     sources: seedSources.map((source) => ({ ...source, ingest_error: null })),
+    extracts: seedExtracts.map((extract) => ({
+      ...extract,
+      suggestion_reason: null,
+      suggestion_concepts: [],
+    })),
     notebooks: seedNotebooks.map((notebook) => ({ ...notebook })),
     notebookItems: seedNotebookItems.map((item) => ({ ...item })),
     feeds: DEFAULT_FEEDS.map((feed, index) => ({
@@ -75,9 +83,8 @@ export function memory(): MemoryTables {
     return fresh;
   }
 
-  // Surviving a hot reload is the point of parking this on `globalThis`, but a
-  // reload that *adds* a table finds the cached object missing it. Backfill
-  // rather than reset, so an ingest in flight is not thrown away.
+  // Preserve hot-reloaded state while backfilling tables introduced by newer
+  // code.
   for (const [key, value] of Object.entries(seeded())) {
     if (existing[key as keyof MemoryTables] === undefined) {
       Object.assign(existing, { [key]: value });
