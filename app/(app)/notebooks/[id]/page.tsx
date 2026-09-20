@@ -1,3 +1,4 @@
+import { NotebookHistory } from "@/components/history-menu";
 import { PageHeader } from "@/components/page-header";
 import { notFound } from "next/navigation";
 import { Sparkline } from "@/components/sparkline";
@@ -77,6 +78,9 @@ export default async function NotebookDetailPage({
           },
         ]}
         description={notebook.description || undefined}
+        actions={
+          <NotebookHistory notebookId={id} notebookName={notebook.name} />
+        }
       />
 
       {!hasDiagnostics ? (

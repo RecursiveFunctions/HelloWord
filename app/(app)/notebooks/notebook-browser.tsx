@@ -1,5 +1,6 @@
 "use client";
 
+import { NotebookHistory } from "@/components/history-menu";
 import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -142,6 +143,7 @@ function NotebookRow({ notebook }: { notebook: NotebookCardModel }) {
           <Badge variant="secondary">Caught up</Badge>
         )}
       </Link>
+      <NotebookHistory notebookId={notebook.id} notebookName={notebook.name} />
       <DeleteNotebook notebook={notebook} />
     </li>
   );
@@ -214,6 +216,12 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
         </CardContent>
       </Card>
     </Link>
+    <NotebookHistory
+      notebookId={notebook.id}
+      notebookName={notebook.name}
+      alwaysVisible={false}
+      className="absolute top-2 right-[3.25rem] z-20 bg-background/80 backdrop-blur-sm"
+    />
     <DeleteNotebook
       notebook={notebook}
       className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm sm:opacity-0 sm:transition-opacity sm:group-hover/notebook:opacity-100 sm:focus-visible:opacity-100"
