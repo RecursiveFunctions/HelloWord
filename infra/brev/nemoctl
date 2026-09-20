@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Control the Brev TRT-LLM Nemotron stack.
+set -uo pipefail
+C=epic_blackburn
+MODEL="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8"
+
+warmup() {
+  echo "waiting for startup..."
+  for i in $(seq 1 40); do
+    curl -s -m 3 -o /dev/null http://127.0.0.1:8000/v1/models && break
+    sleep 10
+  done
+  echo "warmup (3 generations so the autotuner caches real shapes)..."
+  for i in 1 2 3; do
+    curl -s -m 90 -o /dev/null http://127.0.0.1:8000/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Warm up with a 200 word essay about GPUs.\"}],\"max_tokens\":300,\"chat_template_kwargs\":{\"enable_thinking\":false}}"
+  done
+  echo "warmed"
+}
+
+start_serve() {
+  sudo docker exec "$C" bash -lc 'pkill -9 -f trtllm-serve 2>/dev/null; for i in $(seq 1 30); do ss -ltn | grep -q :8000 || break; sleep 2; done'
+  sudo docker exec -d "$C" bash -lc "cd /root && TRTLLM_ENABLE_PDL=1 trtllm-serve \"$MODEL\" \
+    --host 0.0.0.0 --port 8000 --backend _autodeploy --trust_remote_code \
+    --tool_parser qwen3_coder --extra_llm_api_options nano_v3.yaml > /root/trtllm-serve.log 2>&1"
+  warmup
+}
+
+case "${1:-status}" in
+  start|restart) start_serve ;;
+  warmup) warmup ;;
+  stop)   sudo docker exec "$C" bash -lc 'pkill -9 -f trtllm-serve' ; echo stopped ;;
+  log)    sudo docker exec "$C" bash -lc 'tail -f /root/trtllm-serve.log' ;;
+  status)
+    echo "model: $MODEL"
+    echo "serve procs: $(sudo docker exec "$C" bash -lc 'ps aux|grep -v grep|grep -c trtllm-serve' 2>/dev/null)"
+    echo "gpu: $(nvidia-smi --query-gpu=memory.used --format=csv,noheader)"
+    echo "local api: $(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/v1/models)"
+    echo "gate 401 check: $(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/v1/models)"
+    sudo docker ps --format '{{.Names}}: {{.Status}}' | grep -E 'nemotron|blackburn'
+    ;;
+  *) echo "usage: nemoctl {start|restart|stop|status|log|warmup}" ;;
+esac

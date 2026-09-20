@@ -1,0 +1,23 @@
+# Bearer-token gate in front of trtllm-serve. Deployed at /opt/nemotron/Caddyfile
+# on the Brev instance (container: nemotron-gate, host network, port 8080).
+#
+# GATE_KEY placeholder: the real value is the same secret set as NVIDIA_API_KEY
+# in Vercel. It is NOT an NVIDIA key; it is a shared secret minted for this gate.
+# trtllm-serve itself has no authentication, so this gate is the only thing
+# between the public tunnel hostname and free inference.
+{
+	admin off
+	auto_https off
+}
+:8080 {
+	@unauthorized not header Authorization "Bearer GATE_KEY"
+	respond @unauthorized "unauthorized" 401
+
+	reverse_proxy 127.0.0.1:8000 {
+		transport http {
+			read_timeout 600s
+			write_timeout 600s
+			dial_timeout 10s
+		}
+	}
+}
