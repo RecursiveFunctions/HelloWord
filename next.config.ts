@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The color wheel owns the bottom-left corner; keep the Next.js badge
+  // out of its way during development.
+  devIndicators: {
+    position: "bottom-right",
+  },
   // Turbopack infers the workspace root from the nearest lockfile, which on a
   // machine with a stray package-lock.json in the home directory resolves
   // above the repo and ignores ours.
