@@ -32,6 +32,16 @@ export type SourceRow = {
   created_at: string;
 };
 
+export type NoteRow = {
+  id: string;
+  title: string;
+  body_md: string;
+  body_hash: string;
+  origin: "human" | "ai_drafted" | "ai_edited";
+  created_at: string;
+  updated_at: string;
+};
+
 export type ExtractRow = {
   id: string;
   source_id: string | null;

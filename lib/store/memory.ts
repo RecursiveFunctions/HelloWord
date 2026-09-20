@@ -14,6 +14,7 @@ import {
   extracts as seedExtracts,
   notebookItems as seedNotebookItems,
   notebooks as seedNotebooks,
+  notes as seedNotes,
   schedulerProfile as seedProfile,
   schedules as seedSchedules,
   sources as seedSources,
@@ -25,6 +26,7 @@ import type {
   FeedRow,
   NotebookItemRow,
   NotebookRow,
+  NoteRow,
   ReviewEventRow,
   ScheduleRow,
   SchedulerProfileRow,
@@ -33,6 +35,7 @@ import type {
 
 export type MemoryTables = {
   sources: SourceRow[];
+  notes: NoteRow[];
   extracts: ExtractRow[];
   notebooks: NotebookRow[];
   notebookItems: NotebookItemRow[];
@@ -46,6 +49,7 @@ export type MemoryTables = {
 function seeded(): MemoryTables {
   return {
     sources: seedSources.map((source) => ({ ...source, ingest_error: null })),
+    notes: seedNotes.map((note) => ({ ...note })),
     extracts: seedExtracts.map((extract) => ({
       ...extract,
       suggestion_reason: null,
