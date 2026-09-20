@@ -1,9 +1,10 @@
-import type { IngestStatus, SourceRow } from "@/lib/store/types";
 import type {
-  SeedActivity,
-  SeedExtract,
-  SeedNote,
-} from "@/lib/seed/data";
+  ActivityRow,
+  ExtractRow,
+  IngestStatus,
+  NoteRow,
+  SourceRow,
+} from "@/lib/store/types";
 
 /**
  * One flat row shape for the four things the Library lists, so the client
@@ -42,7 +43,7 @@ export function sourceItem(source: SourceRow): LibraryItem {
   };
 }
 
-export function noteItem(note: SeedNote): LibraryItem {
+export function noteItem(note: NoteRow): LibraryItem {
   return {
     type: "note",
     id: note.id,
@@ -52,7 +53,7 @@ export function noteItem(note: SeedNote): LibraryItem {
   };
 }
 
-export function extractItem(extract: SeedExtract): LibraryItem {
+export function extractItem(extract: ExtractRow): LibraryItem {
   return {
     type: "extract",
     id: extract.id,
@@ -66,7 +67,7 @@ export function extractItem(extract: SeedExtract): LibraryItem {
   };
 }
 
-export function activityItem(activity: SeedActivity): LibraryItem {
+export function activityItem(activity: ActivityRow): LibraryItem {
   const payload = activity.payload;
   const stem = "stem" in payload ? payload.stem : payload.template;
   return {

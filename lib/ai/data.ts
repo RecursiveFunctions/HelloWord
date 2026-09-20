@@ -2,11 +2,11 @@ import { dbConfigured, query } from "../db";
 import {
   concepts,
   extractById,
-  noteById,
   seedReviewDaily,
   sourceById,
   SEED_NOW,
 } from "../seed";
+import { getNote } from "../store/notes";
 
 /**
  * Inputs for the AI routes, read from Tiger Cloud when DATABASE_URL is set and
@@ -106,20 +106,13 @@ export async function loadExtracts(idList: string[]): Promise<AiExtract[]> {
 }
 
 export async function loadNote(id: string): Promise<AiNote | null> {
-  if (dbConfigured()) {
-    const rows = await query<AiNote>(
-      `select id, title, body_md, body_hash from note where id = $1`,
-      [id],
-    );
-    return rows[0] ?? null;
-  }
-  const seeded = noteById(id);
-  if (!seeded) return null;
+  const note = await getNote(id);
+  if (!note) return null;
   return {
-    id: seeded.id,
-    title: seeded.title,
-    body_md: seeded.body_md,
-    body_hash: seeded.body_hash,
+    id: note.id,
+    title: note.title,
+    body_md: note.body_md,
+    body_hash: note.body_hash,
   };
 }
 
