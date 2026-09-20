@@ -27,10 +27,10 @@ export function PageHeader({
   className?: string;
 }) {
   const heading =
-    "font-heading text-2xl tracking-tight sm:text-3xl";
+    "font-heading text-3xl font-semibold tracking-tight sm:text-4xl";
 
   return (
-    <header className={cn("mb-6", className)}>
+    <header className={cn("mb-8", className)}>
       {title || breadcrumb?.length || actions ? (
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           {breadcrumb?.length ? (
@@ -87,7 +87,7 @@ export function PageHeader({
         </div>
       ) : null}
       {description ? (
-        <p className="mt-2 max-w-3xl text-muted-foreground">{description}</p>
+        <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{description}</p>
       ) : null}
       {meta ? (
         <p className="mt-1 truncate text-xs text-muted-foreground">{meta}</p>

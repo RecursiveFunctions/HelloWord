@@ -23,8 +23,8 @@ export function PageSection({
 }) {
   return (
     <section className={className}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 className="flex items-center gap-3 font-heading text-xl tracking-tight sm:text-2xl">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 className="flex items-center gap-3 font-heading text-xl font-semibold tracking-tight sm:text-2xl">
           {Icon ? (
             <Icon className="size-6 shrink-0 text-primary" aria-hidden />
           ) : null}
@@ -37,7 +37,7 @@ export function PageSection({
           {description}
         </p>
       ) : null}
-      <div className="rounded-xl border bg-card p-5 text-base sm:p-6">
+      <div className="rounded-2xl border bg-card p-5 text-base shadow-xs sm:p-7">
         {children}
       </div>
     </section>

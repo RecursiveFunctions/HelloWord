@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Clock, Palette, Server, UserRound } from "lucide-react";
 import { ClockPresets } from "@/components/clock-presets";
-import { ColorWheel } from "@/components/color-wheel";
 import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
+import { ThemeEditor } from "@/components/theme-editor";
 import { aFactorCopy } from "@/lib/contracts/scheduling";
 import { getProfile } from "@/lib/store/review";
 import type { ReactNode } from "react";
@@ -56,9 +56,9 @@ export default async function SettingsPage() {
       <PageSection
         title="Appearance"
         icon={Palette}
-        description="Pick the colour the whole app is drawn in."
+        description="Accent, light or dark, and the surface everything sits on."
       >
-        <ColorWheel />
+        <ThemeEditor />
       </PageSection>
 
       <PageSection

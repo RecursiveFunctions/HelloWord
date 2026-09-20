@@ -15,9 +15,10 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/notebooks",
     scope: "/",
     display: "standalone",
-    orientation: "portrait-primary",
-    background_color: "#fcfcfd",
-    theme_color: "#fcfcfd",
+    // Notes are written on tablets too, in either orientation.
+    orientation: "any",
+    background_color: "#f6f6f8",
+    theme_color: "#f6f6f8",
     categories: ["education", "productivity"],
     icons: [
       { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
