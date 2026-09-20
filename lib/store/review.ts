@@ -11,6 +11,7 @@ import { dbConfigured, pool, query } from "@/lib/db";
 import type { ActivityPayload } from "@/lib/contracts/activity";
 import { memory } from "./memory";
 import {
+  isLive,
   isoString,
   isoStringOrNull,
   type ActivityRow,
@@ -59,10 +60,11 @@ function hydrateSchedule(row: Record<string, unknown>): ScheduleRow {
 
 export async function listActivities(): Promise<ActivityRow[]> {
   if (dbConfigured()) {
-    const rows = await query(`select ${ACTIVITY_COLUMNS} from activity`);
+    const rows = await query(`select ${ACTIVITY_COLUMNS} from activity where deleted_at is null`,
+    );
     return rows.map(hydrateActivity);
   }
-  return memory().activities;
+  return memory().activities.filter(isLive);
 }
 
 export async function createActivities(
@@ -163,12 +165,13 @@ export async function createManualCloze(
 export async function getActivity(id: string): Promise<ActivityRow | null> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${ACTIVITY_COLUMNS} from activity where id = $1`,
+      `select ${ACTIVITY_COLUMNS} from activity
+       where id = $1 and deleted_at is null`,
       [id],
     );
     return rows[0] ? hydrateActivity(rows[0]) : null;
   }
-  return memory().activities.find((a) => a.id === id) ?? null;
+  return memory().activities.find((a) => a.id === id && isLive(a)) ?? null;
 }
 
 export async function getSchedule(

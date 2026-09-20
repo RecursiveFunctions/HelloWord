@@ -2,6 +2,7 @@ import type { SelectorBundle } from "@/lib/contracts/anchor";
 import { dbConfigured, query } from "@/lib/db";
 import { memory } from "./memory";
 import {
+  isLive,
   isoString,
   isoStringOrNull,
   type ExtractRow,
@@ -40,23 +41,26 @@ function hydrate(row: Record<string, unknown>): ExtractRow {
 export async function listExtracts(): Promise<ExtractRow[]> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from extract where accepted order by created_at desc`,
+      `select ${COLUMNS} from extract where accepted and deleted_at is null
+       order by created_at desc`,
     );
     return rows.map(hydrate);
   }
-  return memory().extracts.filter((extract) => extract.accepted);
+  return memory().extracts.filter(
+    (extract) => extract.accepted && isLive(extract),
+  );
 }
 
 export async function getExtract(id: string): Promise<ExtractRow | null> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from extract where id = $1 and accepted limit 1`,
+      `select ${COLUMNS} from extract where id = $1 and accepted and deleted_at is null limit 1`,
       [id],
     );
     return rows[0] ? hydrate(rows[0]) : null;
   }
   return memory().extracts.find(
-    (extract) => extract.id === id && extract.accepted,
+    (extract) => extract.id === id && extract.accepted && isLive(extract),
   ) ?? null;
 }
 
@@ -64,14 +68,17 @@ export async function listSourceExtracts(sourceId: string): Promise<ExtractRow[]
   if (dbConfigured()) {
     const rows = await query(
       `select ${COLUMNS} from extract
-       where source_id = $1 and accepted
+       where source_id = $1 and accepted and deleted_at is null
        order by priority, created_at`,
       [sourceId],
     );
     return rows.map(hydrate);
   }
   return memory().extracts
-    .filter((extract) => extract.source_id === sourceId && extract.accepted)
+    .filter(
+      (extract) =>
+        extract.source_id === sourceId && extract.accepted && isLive(extract),
+    )
     .sort((a, b) => a.priority - b.priority || a.created_at.localeCompare(b.created_at));
 }
 
@@ -209,12 +216,16 @@ export async function createProposedExtract(
 export async function listSourceExtractsAny(sourceId: string): Promise<ExtractRow[]> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from extract where source_id = $1 order by priority, created_at`,
+      `select ${COLUMNS} from extract
+       where source_id = $1 and deleted_at is null
+       order by priority, created_at`,
       [sourceId],
     );
     return rows.map(hydrate);
   }
-  return memory().extracts.filter((extract) => extract.source_id === sourceId);
+  return memory().extracts.filter(
+    (extract) => extract.source_id === sourceId && isLive(extract),
+  );
 }
 
 export async function deleteExtract(id: string): Promise<void> {
@@ -244,6 +255,7 @@ export type ReadingQueueOptions = {
 function inQueue(extract: ExtractRow, now: Date, includePending: boolean): boolean {
   return (
     (includePending || extract.accepted) &&
+    isLive(extract) &&
     extract.source_id !== null &&
     extract.queue_status === "queued" &&
     new Date(extract.queue_due) <= now
@@ -258,7 +270,7 @@ export async function listReadingQueue(
   if (dbConfigured()) {
     const rows = await query(
       `select ${COLUMNS} from extract
-       where ($2 or accepted) and source_id is not null
+       where ($2 or accepted) and source_id is not null and deleted_at is null
          and queue_status = 'queued' and queue_due <= $1
        order by priority, queue_due, created_at
        ${options.limit ? "limit $3" : ""}`,
@@ -290,7 +302,8 @@ export async function readingCounts(
     const rows = await query(
       `select count(*) filter (where queue_due <= $1) as due, count(*) as queued
        from extract
-       where ($2 or accepted) and source_id is not null and queue_status = 'queued'`,
+       where ($2 or accepted) and source_id is not null
+         and deleted_at is null and queue_status = 'queued'`,
       [now.toISOString(), includePending],
     );
     return { due: Number(rows[0]?.due ?? 0), queued: Number(rows[0]?.queued ?? 0) };
@@ -298,6 +311,7 @@ export async function readingCounts(
   const queued = memory().extracts.filter(
     (extract) =>
       (includePending || extract.accepted) &&
+      isLive(extract) &&
       extract.source_id !== null &&
       extract.queue_status === "queued",
   );
@@ -320,13 +334,15 @@ export async function getExtractsByIds(ids: string[]): Promise<ExtractRow[]> {
   if (ids.length === 0) return [];
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from extract where id = any($1::uuid[])`,
+      `select ${COLUMNS} from extract where id = any($1::uuid[]) and deleted_at is null`,
       [ids],
     );
     return rows.map(hydrate);
   }
   const wanted = new Set(ids);
-  return memory().extracts.filter((extract) => wanted.has(extract.id));
+  return memory().extracts.filter(
+    (extract) => wanted.has(extract.id) && isLive(extract),
+  );
 }
 
 export type ExtractPatch = Partial<

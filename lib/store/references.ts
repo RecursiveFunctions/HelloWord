@@ -28,7 +28,8 @@ export async function referenceExists(
     // `itemType` is validated against the enum before it reaches here, so the
     // table name is never attacker-controlled.
     const rows = await query(
-      `select 1 from ${TABLES[itemType]} where id = $1 limit 1`,
+      `select 1 from ${TABLES[itemType]}
+       where id = $1 and deleted_at is null limit 1`,
       [itemId],
     );
     return rows.length > 0;

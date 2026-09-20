@@ -1,7 +1,7 @@
 import { dbConfigured, query } from "@/lib/db";
-import { deleteCoverBlob } from "./covers";
 import { memory } from "./memory";
 import {
+  isLive,
   isoString,
   type NotebookItemRow,
   type NotebookItemType,
@@ -33,23 +33,30 @@ function hydrateItem(row: Record<string, unknown>): NotebookItemRow {
 export async function listNotebooks(): Promise<NotebookRow[]> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from notebook order by created_at asc`,
+      `select ${COLUMNS} from notebook
+       where deleted_at is null order by created_at asc`,
     );
     return rows.map(hydrate);
   }
-  return [...memory().notebooks].sort(
+  return memory()
+    .notebooks.filter(isLive)
+    .sort(
     (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at),
   );
 }
 
 export async function getNotebook(id: string): Promise<NotebookRow | null> {
   if (dbConfigured()) {
-    const rows = await query(`select ${COLUMNS} from notebook where id = $1`, [
-      id,
-    ]);
+    const rows = await query(`select ${COLUMNS} from notebook where id = $1 and deleted_at is null`,
+      [id],
+    );
     return rows[0] ? hydrate(rows[0]) : null;
   }
-  return memory().notebooks.find((notebook) => notebook.id === id) ?? null;
+  return (
+    memory().notebooks.find(
+      (notebook) => notebook.id === id && isLive(notebook),
+    ) ?? null
+  );
 }
 
 export async function createNotebook(input: {
@@ -111,27 +118,6 @@ export async function updateNotebook(
   if (!row) return null;
   Object.assign(row, Object.fromEntries(entries));
   return row;
-}
-
-export async function deleteNotebook(id: string): Promise<boolean> {
-  if (dbConfigured()) {
-    const rows = await query(`delete from notebook where id = $1 returning id`, [
-      id,
-    ]);
-    if (rows.length === 0) return false;
-    deleteCoverBlob(id);
-    return true;
-  }
-
-  const tables = memory();
-  const index = tables.notebooks.findIndex((notebook) => notebook.id === id);
-  if (index === -1) return false;
-  tables.notebooks.splice(index, 1);
-  tables.notebookItems = tables.notebookItems.filter(
-    (item) => item.notebook_id !== id,
-  );
-  deleteCoverBlob(id);
-  return true;
 }
 
 export async function listNotebookItems(

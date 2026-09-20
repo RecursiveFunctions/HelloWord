@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Plus } from "lucide-react";
+import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,6 +19,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
+import { trashWithUndo } from "@/lib/client/trash";
 import { cn } from "@/lib/utils";
 import type { LibraryItem, LibraryItemType } from "./items";
 
@@ -107,6 +108,17 @@ export function LibraryBrowser({
     );
     setSelected(new Set());
     router.refresh();
+  }
+
+  function trash(item: LibraryItem) {
+    setSelected((current) => {
+      const next = new Set(current);
+      next.delete(`${item.type}:${item.id}`);
+      return next;
+    });
+    void trashWithUndo({ type: item.type, id: item.id }, item.title, () =>
+      router.refresh(),
+    );
   }
 
   return (
@@ -238,6 +250,15 @@ export function LibraryBrowser({
                     </p>
                   ) : null}
                 </div>
+                <Button
+                  size="icon-touch"
+                  variant="ghost"
+                  className="-my-1 shrink-0 text-muted-foreground hover:text-destructive"
+                  aria-label={`Delete ${item.title}`}
+                  onClick={() => trash(item)}
+                >
+                  <Trash2 />
+                </Button>
               </li>
             );
           })}

@@ -1,4 +1,8 @@
+import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { listExtracts } from "@/lib/store/extracts";
 import { listNotebooks } from "@/lib/store/notebooks";
 import { listNotes } from "@/lib/store/notes";
@@ -38,6 +42,14 @@ export default async function LibraryPage() {
         className="mb-0"
         title="Library"
         description="Browse your collection."
+        actions={
+          <Link
+            href="/library/trash"
+            className={cn(buttonVariants({ variant: "ghost", size: "touch" }))}
+          >
+            <Trash2 /> Recently deleted
+          </Link>
+        }
       />
 
       <AddSource />

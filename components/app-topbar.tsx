@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Library, ListOrdered, Settings } from "lucide-react";
 import { Flashcards } from "@/components/icons/flashcards";
+import { HistoryShortcuts } from "@/components/history-menu";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +77,7 @@ export function AppTopbar({
             })}
           </nav>
 
+          <HistoryShortcuts />
           <div aria-hidden />
         </div>
       </header>

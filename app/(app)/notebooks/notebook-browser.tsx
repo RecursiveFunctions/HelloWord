@@ -1,10 +1,13 @@
 "use client";
 
+import { NotebookHistory } from "@/components/history-menu";
 import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
-import { UploadCloud } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Trash2, UploadCloud } from "lucide-react";
 import { Sparkline } from "@/components/sparkline";
 import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { trashWithUndo } from "@/lib/client/trash";
 import { cn } from "@/lib/utils";
 import { NewNotebook } from "./new-notebook";
 import { useFileDrop, useNotebookUpload } from "./use-notebook-upload";
@@ -53,6 +57,12 @@ export function NotebookBrowser({
             {items.length > 0 ? (
               <WorkspaceViewToggle view={view} onChange={choose} />
             ) : null}
+            <Link
+              href="/library/trash"
+              className={cn(buttonVariants({ variant: "ghost", size: "touch" }))}
+            >
+              <Trash2 /> Recently deleted
+            </Link>
             <NewNotebook />
           </>
         }
@@ -83,12 +93,39 @@ export function NotebookBrowser({
   );
 }
 
+function DeleteNotebook({
+  notebook,
+  className,
+}: {
+  notebook: NotebookCardModel;
+  className?: string;
+}) {
+  const router = useRouter();
+  return (
+    <Button
+      size="icon-touch"
+      variant="ghost"
+      className={cn("text-muted-foreground hover:text-destructive", className)}
+      aria-label={`Delete ${notebook.name}`}
+      onClick={() =>
+        void trashWithUndo(
+          { type: "notebook", id: notebook.id },
+          notebook.name,
+          () => router.refresh(),
+        )
+      }
+    >
+      <Trash2 />
+    </Button>
+  );
+}
+
 function NotebookRow({ notebook }: { notebook: NotebookCardModel }) {
   return (
-    <li>
+    <li className="flex items-center pr-2">
       <Link
         href={`/notebooks/${notebook.id}`}
-        className="flex min-h-14 items-start gap-3 px-4 py-3 text-sm"
+        className="flex min-h-14 min-w-0 flex-1 items-start gap-3 px-4 py-3 text-sm"
       >
         <span
           className="mt-1.5 size-2.5 shrink-0 rounded-full"
@@ -106,6 +143,8 @@ function NotebookRow({ notebook }: { notebook: NotebookCardModel }) {
           <Badge variant="secondary">Caught up</Badge>
         )}
       </Link>
+      <NotebookHistory notebookId={notebook.id} notebookName={notebook.name} />
+      <DeleteNotebook notebook={notebook} />
     </li>
   );
 }
@@ -116,6 +155,7 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
   const { active, handlers } = useFileDrop((files) => void upload(files));
 
   return (
+    <div className="group/notebook relative h-full">
     <Link href={`/notebooks/${notebook.id}`} {...handlers} draggable={false}>
       <Card
         className={cn(
@@ -176,5 +216,16 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
         </CardContent>
       </Card>
     </Link>
+    <NotebookHistory
+      notebookId={notebook.id}
+      notebookName={notebook.name}
+      alwaysVisible={false}
+      className="absolute top-2 right-[3.25rem] z-20 bg-background/80 backdrop-blur-sm"
+    />
+    <DeleteNotebook
+      notebook={notebook}
+      className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm sm:opacity-0 sm:transition-opacity sm:group-hover/notebook:opacity-100 sm:focus-visible:opacity-100"
+    />
+    </div>
   );
 }
