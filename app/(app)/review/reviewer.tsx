@@ -470,7 +470,9 @@ function CardSession({
           <Badge variant="outline">{card.type.replace("_", " ")}</Badge>
           <Badge variant="outline">{STATE_LABEL[card.state] ?? "new"}</Badge>
           {card.stale ? <Badge variant="destructive">stale</Badge> : null}
-          <span className="text-muted-foreground">from {card.noteTitle}</span>
+          <span className="text-muted-foreground">
+            from {card.parentType} · {card.parentTitle}
+          </span>
           <span className="ml-auto text-muted-foreground">
             {remaining} left in {scopeName}
           </span>

@@ -8,6 +8,7 @@
 import { getProfile, listActivities, listSchedules } from "@/lib/store/review";
 import { listNotebookItems, listNotebooks } from "@/lib/store/notebooks";
 import { listNotesByIds } from "@/lib/store/notes";
+import { getExtract } from "@/lib/store/extracts";
 import { emptySchedule, reviewNow } from "./engine";
 import type { ActivityRow, ScheduleRow } from "@/lib/store/types";
 
@@ -19,8 +20,9 @@ async function resolveNow(explicit?: Date): Promise<Date> {
 export type QueueCard = {
   activity: ActivityRow;
   schedule: ScheduleRow;
-  noteId: string;
-  noteTitle: string;
+  parentId: string;
+  parentType: "note" | "extract";
+  parentTitle: string;
   /** The note has been edited since this question was generated. */
   stale: boolean;
 };
@@ -30,8 +32,9 @@ export type ClientCard = {
   activityId: string;
   type: ActivityRow["type"];
   prompt: ClientPrompt;
-  noteId: string;
-  noteTitle: string;
+  parentId: string;
+  parentType: "note" | "extract";
+  parentTitle: string;
   stale: boolean;
   due: string;
   aFactor: number;
@@ -76,8 +79,9 @@ export function toClientCard(card: QueueCard): ClientCard {
     activityId: card.activity.id,
     type: card.activity.type,
     prompt,
-    noteId: card.noteId,
-    noteTitle: card.noteTitle,
+    parentId: card.parentId,
+    parentType: card.parentType,
+    parentTitle: card.parentTitle,
     stale: card.stale,
     due: card.schedule.due,
     aFactor: card.schedule.a_factor,
@@ -104,8 +108,8 @@ async function noteHashes(ids: string[]): Promise<Map<string, string>> {
 /**
  * Which activities a notebook contains.
  *
- * Membership counts two ways: the activity itself was added, or its parent note
- * was. A user who drags a note into a notebook means "test me on this", and
+ * Membership counts two ways: the activity itself was added, or its parent
+ * note/extract was. A user who drags a parent into a notebook means "test me on this", and
  * would be surprised to find the notebook's review queue empty.
  */
 async function activityIdsIn(
@@ -119,8 +123,14 @@ async function activityIdsIn(
   const noteIds = new Set(
     items.filter((i) => i.item_type === "note").map((i) => i.item_id),
   );
+  const extractIds = new Set(
+    items.filter((i) => i.item_type === "extract").map((i) => i.item_id),
+  );
   for (const activity of all) {
-    if (noteIds.has(activity.note_id)) direct.add(activity.id);
+    if (
+      (activity.note_id && noteIds.has(activity.note_id)) ||
+      (activity.extract_id && extractIds.has(activity.extract_id))
+    ) direct.add(activity.id);
   }
   return direct;
 }
@@ -196,19 +206,40 @@ export async function queueSnapshot(
     .filter((iso) => new Date(iso) > now)
     .sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
 
-  const noteIds = [...new Set(due.map((d) => d.activity.note_id))];
+  const noteIds = [...new Set(due.flatMap((d) => d.activity.note_id ? [d.activity.note_id] : []))];
+  const extractIds = [...new Set(due.flatMap((d) => d.activity.extract_id ? [d.activity.extract_id] : []))];
   const [titles, hashes] = await Promise.all([
     noteTitles(noteIds),
     noteHashes(noteIds),
   ]);
+  const extractTitles = new Map(
+    (await Promise.all(extractIds.map(getExtract)))
+      .filter((extract) => extract !== null)
+      .map((extract) => [extract.id, extract.body_md] as const),
+  );
 
-  const cards = due.map(({ activity, schedule }) => ({
-    activity,
-    schedule,
-    noteId: activity.note_id,
-    noteTitle: titles.get(activity.note_id) ?? "Untitled note",
-    stale: hashes.get(activity.note_id) !== activity.source_body_hash,
-  }));
+  const cards = due.map(({ activity, schedule }): QueueCard => {
+    if (activity.note_id) {
+      return {
+        activity,
+        schedule,
+        parentId: activity.note_id,
+        parentType: "note",
+        parentTitle: titles.get(activity.note_id) ?? "Untitled note",
+        stale: hashes.get(activity.note_id) !== activity.source_body_hash,
+      };
+    }
+    const extractId = activity.extract_id!;
+    const body = extractTitles.get(extractId) ?? "Extract";
+    return {
+      activity,
+      schedule,
+      parentId: extractId,
+      parentType: "extract",
+      parentTitle: body.length > 80 ? `${body.slice(0, 77)}…` : body,
+      stale: false,
+    };
+  });
 
   return {
     cards: options.limit ? cards.slice(0, options.limit) : cards,

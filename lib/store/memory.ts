@@ -83,6 +83,7 @@ function seeded(): MemoryTables {
     })),
     activities: seedActivities.map((activity) => ({
       ...activity,
+      extract_id: activity.extract_id ?? null,
       variant_of: activity.variant_of ?? null,
     })),
     schedules: seedSchedules.map((schedule) => ({ ...schedule })),

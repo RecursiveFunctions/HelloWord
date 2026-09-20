@@ -10,6 +10,7 @@ import {
 import {
   clearHighlight,
   offsetAtPoint,
+  offsetsForSelection,
   paintHighlight,
   rangesForOffsets,
   supportsCustomHighlight,
@@ -30,6 +31,8 @@ type SourcePaneProps = {
   proposals?: readonly PaintedExtract[];
   activeExtractId?: string | null;
   onActivateExtract?: (id: string | null) => void;
+  onSelectionChange?: (selection: { start: number; end: number } | null) => void;
+  onSelectionMenu?: (position: { x: number; y: number }) => void;
 };
 
 /** One source-tagged run of text. The attribute is what `lib/anchor/dom` queries. */
@@ -122,6 +125,8 @@ export function SourcePane({
   proposals = [],
   activeExtractId,
   onActivateExtract,
+  onSelectionChange,
+  onSelectionMenu,
 }: SourcePaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blocks = useMemo(() => parseBlocks(markdown), [markdown]);
@@ -171,8 +176,29 @@ export function SourcePane({
     onActivateExtract(hit?.id ?? null);
   };
 
+  const captureSelection = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    onSelectionChange?.(offsetsForSelection(container));
+  };
+
+  const handleContextMenu = (event: MouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container || !offsetsForSelection(container)) return;
+    event.preventDefault();
+    captureSelection();
+    onSelectionMenu?.({ x: event.clientX, y: event.clientY });
+  };
+
   return (
-    <div ref={containerRef} className="reader-source" onClick={handleClick}>
+    <div
+      ref={containerRef}
+      className="reader-source"
+      onClick={handleClick}
+      onMouseUp={captureSelection}
+      onTouchEnd={captureSelection}
+      onContextMenu={handleContextMenu}
+    >
       {blocks.map((block) => (
         <BlockView key={`${block.kind}-${block.start}`} block={block} />
       ))}

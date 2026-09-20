@@ -179,7 +179,7 @@ async function resolve(
         previewSrc: itemPreviewSrc(
           "activity",
           activity.id,
-          activity.source_body_hash,
+          activity.source_body_hash ?? JSON.stringify(activity.payload),
         ),
       };
     }

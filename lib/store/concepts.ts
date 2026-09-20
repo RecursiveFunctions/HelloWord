@@ -55,3 +55,25 @@ export async function firstConceptForNote(
   if (!relation) return null;
   return memory().concepts.find((concept) => concept.id === relation.concept_id) ?? null;
 }
+
+export async function firstConceptForExtract(
+  extractId: string,
+): Promise<ConceptRow | null> {
+  if (dbConfigured()) {
+    const rows = await query(
+      `select c.id, c.label
+       from concept c
+       join concept_extract ce on ce.concept_id = c.id
+       where ce.extract_id = $1
+       order by c.label
+       limit 1`,
+      [extractId],
+    );
+    return rows[0] ? hydrateConcept(rows[0]) : null;
+  }
+  const relation = memory().conceptExtracts.find(
+    (row) => row.extract_id === extractId,
+  );
+  if (!relation) return null;
+  return memory().concepts.find((concept) => concept.id === relation.concept_id) ?? null;
+}

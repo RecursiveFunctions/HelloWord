@@ -19,7 +19,7 @@ import {
   type SchedulerProfileRow,
 } from "./types";
 
-const ACTIVITY_COLUMNS = `id, note_id, type, payload, source_body_hash, variant_of, created_at`;
+const ACTIVITY_COLUMNS = `id, note_id, extract_id, type, payload, source_body_hash, variant_of, created_at`;
 const SCHEDULE_COLUMNS = `activity_id, due, stability, difficulty, elapsed_days,
                           scheduled_days, learning_steps, reps, lapses, state,
                           last_review, a_factor`;
@@ -27,13 +27,14 @@ const SCHEDULE_COLUMNS = `activity_id, due, stability, difficulty, elapsed_days,
 function hydrateActivity(row: Record<string, unknown>): ActivityRow {
   return {
     id: String(row.id),
-    note_id: String(row.note_id),
+    note_id: (row.note_id as string | null) ?? null,
+    extract_id: (row.extract_id as string | null) ?? null,
     type: row.type as ActivityRow["type"],
     // jsonb arrives parsed from pg, but a text column would not.
     payload: (typeof row.payload === "string"
       ? JSON.parse(row.payload)
       : row.payload) as ActivityPayload,
-    source_body_hash: String(row.source_body_hash),
+    source_body_hash: (row.source_body_hash as string | null) ?? null,
     variant_of: (row.variant_of as string | null) ?? null,
     created_at: isoString(row.created_at),
   };
@@ -98,6 +99,7 @@ export async function createActivities(
   const created = payloads.map((payload): ActivityRow => ({
     id: randomUUID(),
     note_id: noteId,
+    extract_id: null,
     type: payload.type,
     payload,
     source_body_hash: sourceBodyHash,
@@ -106,6 +108,56 @@ export async function createActivities(
   }));
   memory().activities.push(...created);
   return created;
+}
+
+export async function createManualCloze(
+  extractId: string,
+  payload: Extract<ActivityPayload, { type: "fill_blank" }>,
+): Promise<{ activity: ActivityRow; created: boolean }> {
+  if (dbConfigured()) {
+    const existing = await query(
+      `select ${ACTIVITY_COLUMNS} from activity
+       where extract_id = $1 and type = 'fill_blank' and payload = $2::jsonb
+       limit 1`,
+      [extractId, JSON.stringify(payload)],
+    );
+    if (existing[0]) return { activity: hydrateActivity(existing[0]), created: false };
+    const rows = await query(
+      `insert into activity (extract_id, type, payload, source_body_hash)
+       values ($1, 'fill_blank', $2::jsonb, null)
+       on conflict do nothing
+       returning ${ACTIVITY_COLUMNS}`,
+      [extractId, JSON.stringify(payload)],
+    );
+    if (rows[0]) return { activity: hydrateActivity(rows[0]), created: true };
+    const raced = await query(
+      `select ${ACTIVITY_COLUMNS} from activity
+       where extract_id = $1 and type = 'fill_blank' and payload = $2::jsonb
+       limit 1`,
+      [extractId, JSON.stringify(payload)],
+    );
+    return { activity: hydrateActivity(raced[0]), created: false };
+  }
+
+  const existing = memory().activities.find(
+    (activity) =>
+      activity.extract_id === extractId &&
+      activity.type === "fill_blank" &&
+      JSON.stringify(activity.payload) === JSON.stringify(payload),
+  );
+  if (existing) return { activity: existing, created: false };
+  const activity: ActivityRow = {
+    id: randomUUID(),
+    note_id: null,
+    extract_id: extractId,
+    type: "fill_blank",
+    payload,
+    source_body_hash: null,
+    variant_of: null,
+    created_at: new Date().toISOString(),
+  };
+  memory().activities.push(activity);
+  return { activity, created: true };
 }
 
 export async function getActivity(id: string): Promise<ActivityRow | null> {
@@ -202,14 +254,15 @@ export async function setAFactor(
 export async function recordReviewEvent(event: ReviewEventRow): Promise<void> {
   if (dbConfigured()) {
     await query(
-      `insert into review_event (time, activity_id, note_id, concept_id, rating,
+      `insert into review_event (time, activity_id, note_id, extract_id, concept_id, rating,
                                  state, elapsed_days, scheduled_days, stability,
                                  difficulty, duration_ms, mode)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [
         event.time,
         event.activity_id,
         event.note_id,
+        event.extract_id,
         event.concept_id,
         event.rating,
         event.state,

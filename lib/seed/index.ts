@@ -97,13 +97,14 @@ export function reviewQueue(now = SEED_NOW): ReviewQueueItem[] {
     .sort((a, b) => +new Date(a.due) - +new Date(b.due));
   for (const schedule of due) {
     const activity = activityById(schedule.activity_id);
-    const note = activity ? noteById(activity.note_id) : undefined;
+    const note = activity?.note_id ? noteById(activity.note_id) : undefined;
     if (activity && note) rows.push({ schedule, activity, note });
   }
   return rows;
 }
 
 export function isStale(activity: SeedActivity): boolean {
+  if (!activity.note_id) return false;
   const note = noteById(activity.note_id);
   return !note || activity.source_body_hash !== note.body_hash;
 }

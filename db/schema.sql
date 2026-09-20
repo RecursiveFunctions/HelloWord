@@ -61,18 +61,21 @@ create table extract_note (                 -- many extracts distil into many no
 
 create table activity (
   id               uuid primary key default gen_random_uuid(),
-  note_id          uuid not null references note(id) on delete cascade,
+  note_id          uuid references note(id) on delete cascade,
+  extract_id       uuid references extract(id) on delete cascade,
   type             text not null check (type in ('mcq','select_all','fill_blank','closed')),
   payload          jsonb not null,          -- ActivityPayload, discriminated on type
-  source_body_hash text not null,           -- note.body_hash at generation time
+  source_body_hash text,                    -- note.body_hash for note-backed activities
   variant_of       uuid references activity(id),
-  created_at       timestamptz not null default now()
+  created_at       timestamptz not null default now(),
+  check (num_nonnulls(note_id, extract_id) = 1)
 );
 
--- staleness is derived, never stored
+-- Only editable note-backed activities can become stale. Extract-backed manual
+-- clozes preserve the immutable extract text they were deliberately made from.
 create view activity_v as
-  select a.*, (a.source_body_hash <> n.body_hash) as stale
-  from activity a join note n on n.id = a.note_id;
+  select a.*, coalesce(a.note_id is not null and a.source_body_hash <> n.body_hash, false) as stale
+  from activity a left join note n on n.id = a.note_id;
 
 -- column names map 1:1 onto the ts-fsrs Card interface
 create table schedule (
@@ -116,7 +119,8 @@ create table scheduler_profile (
 create table review_event (
   time           timestamptz not null default now(),
   activity_id    uuid not null,
-  note_id        uuid not null,
+  note_id        uuid,
+  extract_id     uuid,
   concept_id     uuid,
   rating         smallint not null,             -- ts-fsrs Rating 1..4
   state          smallint not null,
@@ -125,7 +129,8 @@ create table review_event (
   stability      double precision not null,
   difficulty     double precision not null,
   duration_ms    int,
-  mode           text not null default 'queue' check (mode in ('queue','quiz','voice'))
+  mode           text not null default 'queue' check (mode in ('queue','quiz','voice')),
+  check (num_nonnulls(note_id, extract_id) = 1)
 ) with (tsdb.hypertable, tsdb.partition_column = 'time', tsdb.chunk_interval = '1 day');
 
 create table concept (

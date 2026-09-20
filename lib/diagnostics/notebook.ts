@@ -58,14 +58,16 @@ async function scope(notebookId: string) {
       .filter((item) => item.item_type === "activity")
       .map((item) => item.item_id),
   );
-  for (const activity of activities) {
-    if (directActivityIds.has(activity.id)) noteIds.add(activity.note_id);
-  }
   const extractIds = new Set(
     items
       .filter((item) => item.item_type === "extract")
       .map((item) => item.item_id),
   );
+  for (const activity of activities) {
+    if (!directActivityIds.has(activity.id)) continue;
+    if (activity.note_id) noteIds.add(activity.note_id);
+    if (activity.extract_id) extractIds.add(activity.extract_id);
+  }
   const conceptIds = new Set([
     ...relations
       .filter((relation) => noteIds.has(relation.note_id))
