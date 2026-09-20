@@ -8,11 +8,12 @@
  * cannot reach `ready` without markdown: the schema has a check constraint and
  * `updateSource` asserts the same thing for the memory backend.
  *
- * This module is the only place allowed to touch `storage_key` or fetch
- * `origin_uri`. B, C, and D read `source.markdown` and nothing else.
+ * Ingest is the only writer of `source.markdown`. It (and the reader file
+ * route) may open `storage_key` to load the original PDF. Everything else
+ * reads markdown.
  */
 import { normalizeMarkdown, wordCount } from "@/lib/contracts/markdown";
-import { getBytes, spacesConfigured } from "@/lib/storage/spaces";
+import { readStoredPdf } from "@/lib/storage/pdf";
 import { getSource, updateSource } from "@/lib/store/sources";
 import type { IngestMethod, SourceRow } from "@/lib/store/types";
 import { geminiConfigured, geminiPdfToMarkdown, geminiUrlToMarkdown } from "./gemini";
@@ -103,12 +104,15 @@ async function ingestPdf(
 
 async function loadPdfBytes(source: SourceRow): Promise<Uint8Array> {
   if (source.storage_key) {
-    if (!spacesConfigured()) {
+    try {
+      return await readStoredPdf(source.storage_key);
+    } catch (error) {
       throw new IngestError(
-        `Source ${source.id} has a Spaces key but Spaces is not configured. Set SPACES_KEY, SPACES_SECRET, and SPACES_BUCKET.`,
+        error instanceof Error
+          ? error.message
+          : `Could not read stored PDF for source ${source.id}.`,
       );
     }
-    return getBytes(source.storage_key);
   }
 
   if (/^https?:/i.test(source.origin_uri)) {

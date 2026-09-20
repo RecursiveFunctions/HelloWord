@@ -2,7 +2,7 @@ import { after } from "next/server";
 import { CreateSourceBody } from "@/lib/api";
 import { ingestSource } from "@/lib/ingest";
 import { titleFromUrl } from "@/lib/ingest/text";
-import { pdfKey, putPdf, spacesConfigured, spacesUri } from "@/lib/storage/spaces";
+import { persistPdf } from "@/lib/storage/pdf";
 import { createSource, findSourceByUri, listSources } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
 import { fail, invalid, ok, readJson } from "../_respond";
@@ -95,24 +95,19 @@ async function handleUpload(request: Request): Promise<Response> {
     String(form.get("title") ?? "").trim() ||
     file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ");
 
-  // Spaces keeps the original so a side-by-side viewer stays possible later.
-  // It is archival: extraction below reads the bytes we already have.
-  let storageKey: string | null = null;
-  if (spacesConfigured()) {
-    try {
-      const key = pdfKey(file.name);
-      await putPdf(key, bytes);
-      storageKey = key;
-    } catch (error) {
-      console.error("Spaces upload failed; ingesting from memory instead", error);
-    }
+  let stored;
+  try {
+    stored = await persistPdf(file.name, bytes);
+  } catch (error) {
+    console.error("Could not archive the uploaded PDF", error);
+    return fail("Could not store that PDF.");
   }
 
   const source = await createSource({
     kind: "pdf",
     title,
-    origin_uri: storageKey ? spacesUri(storageKey) : `upload://${file.name}`,
-    storage_key: storageKey,
+    origin_uri: stored.origin_uri,
+    storage_key: stored.storage_key,
   });
 
   after(() => ingestSource(source.id, bytes));

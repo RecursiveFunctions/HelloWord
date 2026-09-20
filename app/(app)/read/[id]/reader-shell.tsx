@@ -164,9 +164,9 @@ export function ReaderShell({ source, initialExtracts }: ReaderShellProps) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="min-w-0 flex-1 overflow-auto px-10 pb-8">
-        <div className="mt-6 max-w-2xl">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-8 sm:px-6 lg:px-10">
+        <div className="mx-auto mt-6 max-w-2xl">
           <SourcePane
             markdown={source.markdown}
             extracts={paintedExtracts}
@@ -174,7 +174,7 @@ export function ReaderShell({ source, initialExtracts }: ReaderShellProps) {
           />
         </div>
       </div>
-      <aside className="w-[28rem] shrink-0 overflow-auto border-l bg-sidebar px-5 py-8">
+      <aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-heading text-lg">Nemotron extracts</h2>
