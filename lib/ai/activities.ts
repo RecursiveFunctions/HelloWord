@@ -59,6 +59,10 @@ const ActivityDraft = z.object({
 
 type LooseActivity = z.infer<typeof LooseActivity>;
 
+export function normalizeActivityBatch(value: unknown): unknown {
+  return Array.isArray(value) ? { activities: value } : value;
+}
+
 function asArray(value: string[] | string | undefined): string[] {
   if (value === undefined) return [];
   const list = Array.isArray(value) ? value : [value];
@@ -331,6 +335,7 @@ export async function generateActivities(
   const first = await chatJson(ActivityDraft, {
     name: "activity_batch",
     system: ACTIVITY_SYSTEM,
+    normalize: normalizeActivityBatch,
     // reasoning_effort high: an answer key is not a creative writing exercise.
     reasoningEffort: "high",
     maxTokens: 3_000,
@@ -347,6 +352,7 @@ export async function generateActivities(
       const topUp = await chatJson(ActivityDraft, {
         name: "activity_batch",
         system: ACTIVITY_SYSTEM,
+        normalize: normalizeActivityBatch,
         reasoningEffort: "high",
         maxTokens: 3_000,
         temperature: 0.6,

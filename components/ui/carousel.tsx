@@ -95,14 +95,20 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
+      api.off("reInit", onSelect)
       api?.off("select", onSelect)
     }
   }, [api, onSelect])
+
+  const selectedScrollSnap = api?.selectedScrollSnap()
+  const scrollSnapCount = api?.scrollSnapList().length ?? 0
+  const initialCanScrollPrev = selectedScrollSnap !== undefined && selectedScrollSnap > 0
+  const initialCanScrollNext =
+    selectedScrollSnap !== undefined && selectedScrollSnap < scrollSnapCount - 1
 
   return (
     <CarouselContext.Provider
@@ -114,8 +120,8 @@ function Carousel({
           orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
         scrollPrev,
         scrollNext,
-        canScrollPrev,
-        canScrollNext,
+        canScrollPrev: api ? canScrollPrev || initialCanScrollPrev : false,
+        canScrollNext: api ? canScrollNext || initialCanScrollNext : false,
       }}
     >
       <div

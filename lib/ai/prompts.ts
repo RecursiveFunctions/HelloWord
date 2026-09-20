@@ -36,6 +36,9 @@ export const ACTIVITY_SYSTEM = `You write recall questions from a reader's own s
 
 Only the note is in scope. Do not test anything the note does not say, and do not test the note's formatting.
 
+Return one object with this exact outer shape: {"activities":[question, question]}.
+Never return the questions as a bare JSON array.
+
 Question types and their exact shapes:
 - mcq: {"type":"mcq","stem":string,"options":[3-6 strings],"answer":index into options,"explanation":string}
 - select_all: {"type":"select_all","stem":string,"options":[3-8 strings],"answers":[at least one index],"explanation":string}

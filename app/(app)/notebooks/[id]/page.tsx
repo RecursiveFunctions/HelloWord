@@ -9,15 +9,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  activityById,
   conceptExtracts,
   conceptNotes,
   concepts,
   diagnosticsForNotebook,
-  extractById,
-  noteById,
 } from "@/lib/seed";
+import { getExtract } from "@/lib/store/extracts";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
+import { getNote } from "@/lib/store/notes";
+import { getActivity } from "@/lib/store/review";
 import { resolveNotebookColor } from "@/lib/themes";
 import { getSource } from "@/lib/store/sources";
 import {
@@ -204,15 +204,15 @@ async function resolve(
       return source ? sourceItem(source) : null;
     }
     case "note": {
-      const note = noteById(itemId);
+      const note = await getNote(itemId);
       return note ? noteItem(note) : null;
     }
     case "extract": {
-      const extract = extractById(itemId);
+      const extract = await getExtract(itemId);
       return extract ? extractItem(extract) : null;
     }
     case "activity": {
-      const activity = activityById(itemId);
+      const activity = await getActivity(itemId);
       return activity ? activityItem(activity) : null;
     }
     default:

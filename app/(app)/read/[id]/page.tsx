@@ -9,8 +9,9 @@ import {
 } from "@/components/ui/empty";
 import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
 import { parseBlocks } from "@/lib/editor/blocks";
-import { notes } from "@/lib/seed";
+import { extractNotes, notes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
+import { getNote } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
@@ -148,6 +149,10 @@ export default async function ReadPage({
 		source.kind === "pdf" ||
 		!source.markdown ||
 		!documentLeadsWithTitle(source.markdown, source.title);
+	const linkedNoteId = extractNotes.find(({ extract_id }) =>
+		rawExtracts.some(({ id: extractId }) => extractId === extract_id),
+	)?.note_id;
+	const note = linkedNoteId ? await getNote(linkedNoteId) : null;
 
 	if (markdownReader) {
 		return (
@@ -168,6 +173,7 @@ export default async function ReadPage({
 							markdown: source.markdown!,
 						}}
 						initialExtracts={rawExtracts}
+						initialNote={note}
 					/>
 				</div>
 			</div>
