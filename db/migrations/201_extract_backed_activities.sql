@@ -16,9 +16,19 @@ create view activity_v as
   from activity a
   left join note n on n.id = a.note_id;
 
+-- `review_event` is a hypertable with columnstore enabled, and TimescaleDB
+-- rejects ADD COLUMN carrying an inline constraint on one. Add the bare column
+-- first, then attach the same foreign key as its own ALTER.
 alter table review_event
-  alter column note_id drop not null,
-  add column if not exists extract_id uuid references extract(id) on delete cascade;
+  alter column note_id drop not null;
+
+alter table review_event
+  add column if not exists extract_id uuid;
+
+alter table review_event
+  drop constraint if exists review_event_extract_id_fkey,
+  add constraint review_event_extract_id_fkey
+    foreign key (extract_id) references extract(id) on delete cascade;
 
 alter table review_event
   drop constraint if exists review_event_exactly_one_parent,
