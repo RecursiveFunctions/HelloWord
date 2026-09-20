@@ -43,6 +43,77 @@ npm run smoke
 Run the generated seed only against an empty service. See [db/README.md](db/README.md)
 for the full bootstrap and verification notes.
 
+## Deploy to Vercel
+
+The intended topology is fixture-backed Preview deployments and a Tiger
+Cloud-backed Production deployment. Import this repository into a Vercel
+Hobby project with these settings:
+
+- Framework preset: **Next.js**
+- Root directory: repository root
+- Install command: `npm install` (the committed `package-lock.json` is used)
+- Build command: `npm run build`
+- Node.js version: **22.x**
+- Production branch: `main`
+
+`vercel.json` pins Server Functions to `iad1`, near the Tiger Cloud
+`us-east-1` service, and declares the longer source/AI function durations.
+Leave schema migrations and seed data out of the Vercel build. Provision the
+database once from a trusted workstation using [db/README.md](db/README.md).
+
+### Environment variables
+
+Define variables in **Project Settings → Environment Variables**, scoped as
+follows. Redeploy after changing a value.
+
+| Variable | Preview | Production |
+|---|---|---|
+| `AI_MOCK` | `1` | `0` |
+| `DATABASE_URL` | Unset (committed fixtures) | Tiger Cloud connection string |
+| `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET`, `SPACES_ENDPOINT` | Unset unless testing uploads | Required for PDF uploads |
+| `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL` | Unset | Live provider settings |
+| `DO_INFERENCE_KEY`, `DO_INFERENCE_BASE_URL`, `DO_NEMOTRON_MODEL` | Unset | Live failover settings |
+| `GEMINI_API_KEY` | Unset | Live PDF/URL fallback |
+| `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_PAT`, `SNOWFLAKE_MODEL` | Unset | Live report provider |
+| `ELEVENLABS_API_KEY` | Unset | Add only when that integration is enabled |
+
+Do not add Production database or provider secrets to Preview scope. Preview
+APIs are write-capable and must not be able to mutate the Production database.
+All values are server-only; none should use a `NEXT_PUBLIC_` prefix.
+
+### PDF storage and Spaces CORS
+
+Vercel Functions have an ephemeral filesystem. The app therefore refuses to
+store PDFs locally when `VERCEL=1`; Production PDF uploads require a private
+DigitalOcean Spaces bucket. Local development still falls back to
+`data/pdfs/` when Spaces is not configured.
+
+Large PDFs are uploaded directly from the browser with a presigned `PUT` to
+avoid Vercel's request-body limit. Configure the bucket CORS policy to allow
+`PUT` from the exact Production origin and any Preview origin used for upload
+testing. Allow the `Content-Type` header. Do not make the bucket public; PDF
+reads continue through `/api/sources/[id]/file`.
+
+### Release checklist
+
+1. Run `npm test`, `npm run lint`, and `npm run build` locally.
+2. Deploy a Preview and verify `/api/health` reports `db: false` and
+	`aiMock: true`.
+3. Check navigation, offline fallback, manifest/service-worker installation,
+	and fixture-backed reads in the Preview.
+4. Bootstrap Tiger Cloud out of band, configure Production variables, and
+	deploy `main`.
+5. Verify `/api/health` reports `db: true` and `aiMock: false` without exposing
+	any credential values.
+6. Add a URL, upload a small PDF, upload a PDF over 4 MB through the presigned
+	path, and confirm the archived PDF remains readable after a new invocation.
+7. Exercise AI generation, reporting, review grading, and feed refresh while
+	monitoring Vercel Function logs for provider or timeout errors.
+
+To roll back application code, promote the previous healthy Vercel deployment.
+Do not roll back database migrations destructively; schema changes are
+additive. Rotate any credential that appears in a build log or client bundle.
+
 ## Sponsor credentials
 
 A listing endpoint is not a smoke test. Put keys in `.env.local` (gitignored), then:
