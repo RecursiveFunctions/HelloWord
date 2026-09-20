@@ -22,6 +22,13 @@ export const env = {
       read("NVIDIA_EMBED_BASE_URL") ?? "https://integrate.api.nvidia.com/v1",
     embeddingModel:
       read("NVIDIA_EMBED_MODEL") ?? "nvidia/nemotron-3-embed-1b",
+    /**
+     * Set when NVIDIA_BASE_URL points at a trtllm-serve deployment started
+     * without `--reasoning_parser`. That server has nowhere to put a thinking
+     * trace, so it prepends the trace to `content` and the JSON never parses.
+     * Forcing thinking off is the only configuration that returns clean output.
+     */
+    forceThinkingDisabled: read("NVIDIA_FORCE_THINKING_DISABLED") === "1",
   },
   digitalOcean: {
     apiKey: read("DO_INFERENCE_KEY"),
