@@ -137,15 +137,17 @@ async function complete(
   };
 }
 
-function looksTruncated(raw: string, finishReason: string | null): boolean {
+export function looksTruncated(raw: string, finishReason: string | null): boolean {
   if (finishReason === "length") return true;
   const trimmed = raw.trim();
   if (!trimmed) return false;
   if (/[,:[{]\s*$/.test(trimmed)) return true;
-  let depth = 0;
+  const stack: string[] = [];
   let quoted = false;
   let escaped = false;
-  for (const char of trimmed) {
+  let expectingValue = false;
+  for (let index = 0; index < trimmed.length; index++) {
+    const char = trimmed[index];
     if (escaped) {
       escaped = false;
       continue;
@@ -156,12 +158,25 @@ function looksTruncated(raw: string, finishReason: string | null): boolean {
     }
     if (char === '"') {
       quoted = !quoted;
+      if (!quoted) expectingValue = false;
       continue;
     }
-    if (!quoted && (char === "{" || char === "[")) depth++;
-    if (!quoted && (char === "}" || char === "]")) depth--;
+    if (quoted) continue;
+    if (char === "{" || char === "[") {
+      stack.push(char);
+      expectingValue = false;
+    } else if (char === "}" || char === "]") {
+      const expected = char === "}" ? "{" : "[";
+      if (stack.at(-1) === expected) stack.pop();
+      else return false;
+      expectingValue = false;
+    } else if (char === ":" || char === ",") {
+      expectingValue = true;
+    } else if (!/\s/.test(char)) {
+      expectingValue = false;
+    }
   }
-  return quoted || depth > 0;
+  return quoted || stack.length > 0 || expectingValue;
 }
 
 export async function chatJson<T>(

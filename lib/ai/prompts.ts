@@ -9,6 +9,9 @@ const JSON_ONLY =
 
 export const EXTRACT_SYSTEM = `You select passages worth remembering from reading material, for an incremental reading tool.
 
+Return one object with this exact outer shape: {"proposals":[proposal, proposal]}.
+Never use "passages" or return the proposals as a bare JSON array.
+
 Rules:
 - Every "exact" must be copied verbatim from the excerpt, character for character. Never paraphrase, never fix typos, never join text across a blank line.
 - Choose complete sentences that state a claim and survive on their own out of context. Skip headings, lists, navigation text, and sentences that only make sense with the previous one.
