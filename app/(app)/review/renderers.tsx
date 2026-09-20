@@ -148,7 +148,7 @@ function ChoiceQuestion({ prompt, draft, onChange, revealed }: RendererProps) {
                   "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition",
                   !revealed && "hover:bg-accent",
                   !revealed && isPicked && "border-primary bg-accent",
-                  revealed && isCorrect && "border-green-600 bg-green-600/10",
+                  revealed && isCorrect && "border-success bg-success/10",
                   revealed &&
                     isPicked &&
                     !isCorrect &&
@@ -161,7 +161,7 @@ function ChoiceQuestion({ prompt, draft, onChange, revealed }: RendererProps) {
                 </kbd>
                 <span className="min-w-0 flex-1">{option}</span>
                 {revealed && isCorrect ? (
-                  <Badge className="bg-green-600 text-white">correct</Badge>
+                  <Badge className="bg-success text-background">correct</Badge>
                 ) : null}
                 {revealed && isPicked && !isCorrect ? (
                   <Badge variant="destructive">you</Badge>
@@ -241,12 +241,12 @@ function FillBlankQuestion({
                 }}
                 className={cn(
                   "inline-block h-8 w-40 font-sans text-sm",
-                  revealed && right && "border-green-600 bg-green-600/10",
+                  revealed && right && "border-success bg-success/10",
                   revealed && !right && "border-destructive bg-destructive/10",
                 )}
               />
               {revealed && !right && accepted ? (
-                <span className="mt-0.5 font-sans text-xs text-green-700 dark:text-green-500">
+                <span className="mt-0.5 font-sans text-xs text-success">
                   {accepted[0]}
                 </span>
               ) : null}
@@ -295,7 +295,7 @@ function ClosedQuestion({
         }}
       />
       {revealed?.type === "closed" ? (
-        <div className="rounded-lg border border-green-600/40 bg-green-600/10 px-3 py-2">
+        <div className="rounded-lg border border-success/40 bg-success/10 px-3 py-2">
           <p className="text-xs font-medium text-muted-foreground">Answer</p>
           <p className="font-serif text-lg">{revealed.answer}</p>
         </div>

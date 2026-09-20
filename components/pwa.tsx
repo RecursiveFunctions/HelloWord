@@ -33,7 +33,7 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="flex items-center justify-center gap-2 bg-amber-500/15 px-4 py-1.5 text-center text-xs text-amber-900 dark:text-amber-200"
+      className="flex items-center justify-center gap-2 bg-warning/15 px-4 py-1.5 text-center text-xs text-foreground"
     >
       <WifiOff className="size-3.5" />
       Offline. Reading works from cache; grading a card needs the server.

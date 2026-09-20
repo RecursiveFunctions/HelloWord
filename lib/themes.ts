@@ -1,23 +1,60 @@
-export const THEME_IDS = [
-  "white",
-  "red",
-  "orange",
-  "yellow",
-  "green",
-  "blue",
-  "purple",
-  "pink",
-  "rainbow",
-  "paper",
-  "black",
+/**
+ * App theme = accent + mode + surface. Every colour in the UI derives from
+ * these three choices (see `app/globals.css`), so any combination stays
+ * consistent and readable.
+ */
+export const ACCENTS = [
+  { id: "indigo", label: "Indigo", hue: 275, chroma: 0.2, lightness: 0.48 },
+  { id: "blue", label: "Blue", hue: 250, chroma: 0.19, lightness: 0.48 },
+  { id: "teal", label: "Teal", hue: 195, chroma: 0.11, lightness: 0.48 },
+  { id: "green", label: "Green", hue: 150, chroma: 0.14, lightness: 0.48 },
+  { id: "amber", label: "Amber", hue: 65, chroma: 0.14, lightness: 0.5 },
+  { id: "orange", label: "Orange", hue: 45, chroma: 0.17, lightness: 0.5 },
+  { id: "rose", label: "Rose", hue: 10, chroma: 0.2, lightness: 0.52 },
+  { id: "violet", label: "Violet", hue: 310, chroma: 0.2, lightness: 0.48 },
 ] as const;
 
-export type ThemeId = (typeof THEME_IDS)[number];
+export type AccentId = (typeof ACCENTS)[number]["id"] | "custom";
 
-export const DEFAULT_THEME: ThemeId = "white";
+export const MODES = ["light", "dark", "auto"] as const;
+export type Mode = (typeof MODES)[number];
 
+export const SURFACES = [
+  { id: "clean", label: "Clean", note: "Crisp and neutral" },
+  { id: "paper", label: "Paper", note: "Warm and easy on the eyes" },
+  { id: "slate", label: "Slate", note: "Cool blue-grey" },
+] as const;
+export type SurfaceId = (typeof SURFACES)[number]["id"];
+
+export const TEXT_SIZES = ["small", "medium", "large"] as const;
+export type TextSize = (typeof TEXT_SIZES)[number];
+
+export type ThemeSettings = {
+  accent: AccentId;
+  /** Only used when `accent` is "custom". 0-360. */
+  hue: number;
+  mode: Mode;
+  surface: SurfaceId;
+  textSize: TextSize;
+};
+
+export const DEFAULT_THEME: ThemeSettings = {
+  accent: "indigo",
+  hue: 275,
+  mode: "auto",
+  surface: "clean",
+  textSize: "medium",
+};
+
+/** Colours the browser / installed PWA chrome takes on. */
+export const THEME_COLOR = { light: "#f6f6f8", dark: "#131316" } as const;
+
+/**
+ * Notebook cover colours. These are stored in the database by value, so the
+ * swatch strings below must not change even though the app theme no longer
+ * uses them.
+ */
 export const THEMES = [
-  { id: "white", label: "White", swatch: "oklch(0.995 0 0)" },
   { id: "red", label: "Red", swatch: "oklch(0.65 0.2 25)" },
   { id: "orange", label: "Orange", swatch: "oklch(0.74 0.18 55)" },
   { id: "yellow", label: "Yellow", swatch: "oklch(0.86 0.17 95)" },
@@ -25,28 +62,13 @@ export const THEMES = [
   { id: "blue", label: "Blue", swatch: "oklch(0.65 0.16 250)" },
   { id: "purple", label: "Purple", swatch: "oklch(0.65 0.19 300)" },
   { id: "pink", label: "Pink", swatch: "oklch(0.7 0.18 350)" },
-  {
-    id: "rainbow",
-    label: "Rainbow",
-    swatch:
-      "conic-gradient(from 210deg, oklch(0.72 0.18 25), oklch(0.78 0.14 55), oklch(0.88 0.12 95), oklch(0.8 0.12 145), oklch(0.78 0.1 230), oklch(0.72 0.12 290), oklch(0.76 0.14 340), oklch(0.72 0.18 25))",
-  },
-  {
-    id: "paper",
-    label: "Lined paper",
-    swatch:
-      "repeating-linear-gradient(to bottom, oklch(0.995 0 0) 0 4px, oklch(0.55 0.14 250) 4px 6px)",
-  },
-  { id: "black", label: "Black", swatch: "oklch(0.2 0 0)" },
 ] as const;
 
-export const NOTEBOOK_COLORS = THEMES.filter(
-  (theme) =>
-    theme.id !== "white" &&
-    theme.id !== "black" &&
-    theme.id !== "rainbow" &&
-    theme.id !== "paper",
-);
+export const NOTEBOOK_COLORS: readonly {
+  id: string;
+  label: string;
+  swatch: string;
+}[] = THEMES;
 
 export const NOTEBOOK_COLOR_VALUES = NOTEBOOK_COLORS.map(
   (theme) => theme.swatch,
@@ -54,7 +76,7 @@ export const NOTEBOOK_COLOR_VALUES = NOTEBOOK_COLORS.map(
 
 export const THEME_SWATCHES = Object.fromEntries(
   THEMES.map((theme) => [theme.id, theme.swatch]),
-) as Record<ThemeId, string>;
+) as Record<(typeof THEMES)[number]["id"], string>;
 
 const LEGACY_NOTEBOOK_COLORS: Record<string, string> = {
   "#c2410c": THEME_SWATCHES.yellow,

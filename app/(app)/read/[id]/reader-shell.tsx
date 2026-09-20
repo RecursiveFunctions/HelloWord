@@ -584,25 +584,25 @@ export function ReaderShell({
             </p>
           ) : null}
           {selection ? (
-            <div className="sticky bottom-3 z-20 mt-4 flex gap-2 rounded-xl border bg-background/95 p-2 shadow-lg backdrop-blur lg:hidden">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => void extractSelection()}>
+            <div className="sticky bottom-4 z-20 mt-4 flex gap-2 rounded-2xl border bg-card/95 p-2 shadow-float backdrop-blur-xl lg:pointer-fine:hidden">
+              <Button variant="outline" className="flex-1" onClick={() => void extractSelection()}>
                 Extract
               </Button>
-              <Button size="sm" className="flex-1" onClick={() => void clozeSelection()}>
+              <Button className="flex-1" onClick={() => void clozeSelection()}>
                 Cloze
               </Button>
             </div>
           ) : null}
           {selectionMenu ? (
             <div
-              className="fixed z-50 min-w-44 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
+              className="fixed z-50 min-w-44 rounded-2xl border bg-popover p-1.5 text-popover-foreground shadow-float"
               style={{ left: selectionMenu.x, top: selectionMenu.y }}
               role="menu"
             >
-              <button className="flex w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent" onClick={() => void extractSelection()}>
+              <button className="flex w-full rounded-xl px-3 py-1.5 text-sm hover:bg-accent pointer-coarse:py-3" onClick={() => void extractSelection()}>
                 Create extract <span className="ml-auto pl-4 text-muted-foreground">Alt+X</span>
               </button>
-              <button className="flex w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent" onClick={() => void clozeSelection()}>
+              <button className="flex w-full rounded-xl px-3 py-1.5 text-sm hover:bg-accent pointer-coarse:py-3" onClick={() => void clozeSelection()}>
                 Create cloze <span className="ml-auto pl-4 text-muted-foreground">Alt+Z</span>
               </button>
             </div>

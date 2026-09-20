@@ -1,9 +1,9 @@
 type BucketKey = "struggling" | "known" | "untouched";
 
 const COLORS: Record<BucketKey, string> = {
-  struggling: "#E53935",
-  known: "#1E88E5",
-  untouched: "#E0A106",
+  struggling: "var(--destructive)",
+  known: "var(--info)",
+  untouched: "var(--warning)",
 };
 
 const LABEL_MIN_PERCENT = 8;
@@ -115,7 +115,7 @@ function DiagnosticPie({
             key={`${wedge.key}-label`}
             x={wedge.label.x}
             y={wedge.label.y}
-            fill="#ffffff"
+            fill="var(--background)"
             fontSize={12}
             fontWeight={500}
             textAnchor="middle"

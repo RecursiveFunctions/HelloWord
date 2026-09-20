@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Script from "next/script";
-import { themeInitScript } from "@/components/color-wheel";
+import { ThemeSync } from "@/components/theme-sync";
 import { OfflineBanner, RegisterServiceWorker } from "@/components/pwa";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { themeInitScript } from "@/lib/theme-runtime";
+import { THEME_COLOR } from "@/lib/themes";
 import "./globals.css";
 
 const sans = Geist({
@@ -38,8 +40,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fcfcfd",
-  // An installed PWA should not bounce the whole page when a pane scrolls.
+  // Overridden at runtime once the user picks a mode (see lib/theme-runtime).
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
+  ],
+  // Extend under the notch / home indicator; the shell pads with safe-area insets.
   viewportFit: "cover",
 };
 
@@ -47,7 +53,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      data-theme="white"
+      data-accent="indigo"
+      data-surface="clean"
       suppressHydrationWarning
       className={`${sans.variable} ${mono.variable} ${serif.variable} h-full antialiased`}
     >
@@ -57,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
         <OfflineBanner />
         <TooltipProvider>{children}</TooltipProvider>
+        <ThemeSync />
         <RegisterServiceWorker />
       </body>
     </html>

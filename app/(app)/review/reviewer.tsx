@@ -494,7 +494,7 @@ function CardSession({
               {checked.selfRated ? (
                 <Badge variant="outline">self-rated</Badge>
               ) : checked.correct ? (
-                <Badge className="bg-green-600 text-white">correct</Badge>
+                <Badge className="bg-success text-background">correct</Badge>
               ) : (
                 <Badge variant="destructive">incorrect</Badge>
               )}
