@@ -1,13 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   activityById,
   conceptExtracts,
@@ -28,6 +20,7 @@ import {
   type LibraryItem,
 } from "../../library/items";
 import { NotebookContents } from "./notebook-contents";
+import { NotebookDiagnostics } from "./notebook-diagnostics";
 
 export const dynamic = "force-dynamic";
 
@@ -80,56 +73,11 @@ export default async function NotebookDetailPage({
           the concept breakdown appears here.
         </p>
       ) : (
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Struggling</CardTitle>
-            <CardDescription>Hard or worse, or still unstable.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {diag.struggling.length === 0 ? (
-              <p className="text-muted-foreground">None right now.</p>
-            ) : (
-              diag.struggling.map((row) => (
-                <div key={row.concept}>
-                  <div className="font-medium">{row.concept}</div>
-                  <p className="text-muted-foreground">{row.why}</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Known</CardTitle>
-            <CardDescription>Recall holding across 90 days.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-1.5">
-            {diag.known.map((label) => (
-              <Badge key={label} variant="secondary">
-                {label}
-              </Badge>
-            ))}
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Untouched</CardTitle>
-            <CardDescription>Tagged, never reviewed.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-1.5">
-            {diag.untouched.length === 0 ? (
-              <p className="text-muted-foreground">Every concept has reviews.</p>
-            ) : (
-              diag.untouched.map((label) => (
-                <Badge key={label} variant="outline">
-                  {label}
-                </Badge>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
+        <NotebookDiagnostics
+          struggling={diag.struggling}
+          known={diag.known}
+          untouched={diag.untouched}
+        />
       )}
 
       {hasDiagnostics ? (
