@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
 import {
 	Empty,
 	EmptyDescription,
 	EmptyHeader,
 	EmptyTitle,
 } from "@/components/ui/empty";
-import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
 import { listSourceExtracts, listSourceExtractsAny } from "@/lib/store/extracts";
 import { getNotebook } from "@/lib/store/notebooks";
-import { getNote, listExtractNotes, listNotes } from "@/lib/store/notes";
+import { getNote, listExtractNotes } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
@@ -43,51 +41,6 @@ function SourceHeader({
 			]}
 			meta={detail}
 		/>
-	);
-}
-
-/** Placeholder rail while PDFs use the iframe viewer instead of SourcePane. */
-async function PdfNoteRail() {
-	const notes = await listNotes();
-	return (
-		<aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
-			<h2 className="font-heading text-lg">Note editor</h2>
-			<p className="mt-2 text-sm text-muted-foreground">
-				Tiptap lands here next. Seeded notes and fixture proposals sit below so
-				the rail is not empty.
-			</p>
-			<div className="mt-6 space-y-3">
-				{notes.slice(0, 3).map((note) => (
-					<div key={note.id} className="rounded-lg border bg-card p-3">
-						<div className="flex items-center gap-2">
-							<span className="text-sm font-medium">{note.title}</span>
-							<Badge variant="outline">{note.origin}</Badge>
-						</div>
-						<p className="mt-1 text-sm text-muted-foreground">
-							{note.body_md.trim()}
-						</p>
-					</div>
-				))}
-			</div>
-			<h3 className="mt-8 mb-2 text-sm font-medium">
-				Margin proposals (fixture)
-			</h3>
-			<ul className="space-y-2">
-				{extractProposals.map((proposal) => (
-					<li
-						key={proposal.exact}
-						className="rounded-lg border bg-card p-3 text-sm"
-					>
-						<div className="mb-1 flex justify-between text-xs text-muted-foreground">
-							<span>priority {proposal.priority}</span>
-							<span>{proposal.concepts.join(", ")}</span>
-						</div>
-						<p className="font-serif">{proposal.exact}</p>
-						<p className="mt-1 text-muted-foreground">{proposal.reason}</p>
-					</li>
-				))}
-			</ul>
-		</aside>
 	);
 }
 
@@ -252,7 +205,6 @@ export default async function ReadPage({
 				</div>
 			</div>
 
-			{pdfViewer ? <PdfNoteRail /> : null}
 		</div>
 	);
 }

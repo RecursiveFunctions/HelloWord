@@ -8,13 +8,6 @@ const COLORS: Record<BucketKey, string> = {
 
 const LABEL_MIN_PERCENT = 8;
 
-/** Pie-only stand-in so every color has a wedge when a bucket is empty. */
-const DEMO_VALUES: Record<BucketKey, number> = {
-  struggling: 4,
-  known: 3,
-  untouched: 2,
-};
-
 const BUCKETS = [
   {
     key: "struggling" as const,
@@ -80,10 +73,7 @@ function DiagnosticPie({
 }: {
   slices: { key: BucketKey; label: string; value: number }[];
 }) {
-  const preview = slices.some((slice) => slice.value === 0);
-  const present = preview
-    ? slices.map((slice) => ({ ...slice, value: DEMO_VALUES[slice.key] }))
-    : slices.filter((slice) => slice.value > 0);
+  const present = slices.filter((slice) => slice.value > 0);
   const total = present.reduce((sum, slice) => sum + slice.value, 0);
   const summary = slices
     .map((slice) => `${slice.value} ${slice.label.toLowerCase()}`)
