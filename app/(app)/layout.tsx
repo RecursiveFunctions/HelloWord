@@ -1,5 +1,6 @@
 import { AppTopbar } from "@/components/app-topbar";
 import { dueCounts } from "@/lib/fsrs/queue";
+import { readingDueCount } from "@/lib/reading/queue";
 
 export default async function AppLayout({
   children,
@@ -9,11 +10,14 @@ export default async function AppLayout({
   // Same source of truth as the Review screen. Counting against the frozen
   // seed clock instead would put a different number in the badge than the one
   // the queue actually serves.
-  const { total: dueCount } = await dueCounts();
+  const [{ total: dueCount }, readCount] = await Promise.all([
+    dueCounts(),
+    readingDueCount(),
+  ]);
 
   return (
     <div className="flex min-h-svh flex-col">
-      <AppTopbar dueCount={dueCount} />
+      <AppTopbar dueCount={dueCount} readCount={readCount} />
       {/* Ordinary pages grow with content and scroll on the window. Full-bleed
           readers lock to the viewport under the top bar so panes and PDFs get
           a bounded height. */}

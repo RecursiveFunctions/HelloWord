@@ -14,8 +14,14 @@ psql "$DATABASE_URL" -f db/migrations/200_extract_proposal_metadata.sql
 psql "$DATABASE_URL" -f db/migrations/201_extract_backed_activities.sql
 psql "$DATABASE_URL" -f db/migrations/400_review_clock.sql
 psql "$DATABASE_URL" -f db/seed.sql
+psql "$DATABASE_URL" -f db/migrations/500_extract_queue.sql
+psql "$DATABASE_URL" -f db/migrations/501_distill_drafts.sql
 npm run smoke
 ```
+
+The 500-band migrations run after the seed on purpose: each ends with a
+backfill that marks rows which have already been through the reading queue, and
+it can only mark rows that exist. Both are safe to re-run.
 
 `seed.sql` is demo bootstrap data, not an idempotent migration. Run it only on
 an empty service. The smoke test verifies the `review_event` hypertable,

@@ -2,7 +2,7 @@ import { dbConfigured, query } from "@/lib/db";
 import { normalizeMarkdown } from "@/lib/contracts/markdown";
 import { hashBody } from "@/lib/hash";
 import { memory } from "./memory";
-import { isoString, type NoteRow } from "./types";
+import { isoString, type ExtractNoteRow, type NoteRow } from "./types";
 
 const COLUMNS = `id, title, body_md, body_hash, origin, created_at, updated_at`;
 
@@ -72,7 +72,10 @@ export async function updateNote(
 export async function createNote(input: {
   title: string;
   body_md?: string;
+  /** Defaults to `human`. An approved AI draft says what it is. */
+  origin?: NoteRow["origin"];
 }): Promise<NoteRow> {
+  const origin = input.origin ?? "human";
   const title = input.title.trim() || "Untitled note";
   const body = normalizeMarkdown(input.body_md ?? "");
   const bodyHash = hashBody(body);
@@ -80,9 +83,9 @@ export async function createNote(input: {
   if (dbConfigured()) {
     const rows = await query(
       `insert into note (title, body_md, body_hash, origin)
-       values ($1, $2, $3, 'human')
+       values ($1, $2, $3, $4)
        returning ${COLUMNS}`,
-      [title, body, bodyHash],
+      [title, body, bodyHash, origin],
     );
     return hydrate(rows[0]);
   }
@@ -93,7 +96,7 @@ export async function createNote(input: {
     title,
     body_md: body,
     body_hash: bodyHash,
-    origin: "human",
+    origin,
     created_at: now,
     updated_at: now,
   };
@@ -112,4 +115,36 @@ export async function listNotesByIds(ids: string[]): Promise<NoteRow[]> {
   }
   const wanted = new Set(ids);
   return memory().notes.filter((note) => wanted.has(note.id));
+}
+
+/** Record that an extract was distilled into a note. Idempotent. */
+export async function linkExtractNote(extractId: string, noteId: string): Promise<void> {
+  if (dbConfigured()) {
+    await query(
+      `insert into extract_note (extract_id, note_id) values ($1, $2)
+       on conflict do nothing`,
+      [extractId, noteId],
+    );
+    return;
+  }
+  const relations = memory().extractNotes;
+  if (!relations.some((r) => r.extract_id === extractId && r.note_id === noteId)) {
+    relations.push({ extract_id: extractId, note_id: noteId });
+  }
+}
+
+export async function listExtractNotes(extractIds: string[]): Promise<ExtractNoteRow[]> {
+  if (extractIds.length === 0) return [];
+  if (dbConfigured()) {
+    const rows = await query(
+      `select extract_id, note_id from extract_note where extract_id = any($1::uuid[])`,
+      [extractIds],
+    );
+    return rows.map((row) => ({
+      extract_id: String(row.extract_id),
+      note_id: String(row.note_id),
+    }));
+  }
+  const wanted = new Set(extractIds);
+  return memory().extractNotes.filter((relation) => wanted.has(relation.extract_id));
 }

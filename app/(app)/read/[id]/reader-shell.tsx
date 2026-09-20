@@ -1,20 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import { ActivityDraftList } from "@/components/activity-draft-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { buildSelector, isAnchorableRange, resolveExact } from "@/lib/anchor/selector";
 import { readJson } from "@/lib/client/json";
 import type { ExtractProposal, SelectorBundle } from "@/lib/contracts";
 import type { ActivityPayload } from "@/lib/contracts/activity";
-import type { ExtractRow, NoteRow } from "@/lib/store/types";
+import type { DistillStatus, ExtractRow, NoteRow } from "@/lib/store/types";
 import { NoteEditor } from "./note-editor";
 import { SourcePane, type PaintedExtract } from "./source-pane";
 
 type ResolvedProposal = ExtractProposal & {
   id: string;
+  /** Set when the distiller already stored this as a pending extract. */
+  extractId?: string;
   selector: SelectorBundle;
   state: "pending" | "saving" | "accepted" | "rejected" | "error";
   message?: string;
@@ -23,6 +26,9 @@ type ResolvedProposal = ExtractProposal & {
 type ReaderShellProps = {
   source: { id: string; title: string; markdown: string };
   initialExtracts: ExtractRow[];
+  /** Pending extracts the auto-distiller proposed for this source. */
+  initialProposals?: ExtractRow[];
+  distill?: { status: DistillStatus; error: string | null };
   initialNote: NoteRow | null;
   /** When the source is a PDF, link to the archived original in a new tab. */
   pdfFileUrl?: string;
@@ -30,13 +36,65 @@ type ReaderShellProps = {
 
 type SourceSelection = { start: number; end: number };
 
-function activityPrompt(activity: ActivityPayload): string {
-  return activity.type === "fill_blank" ? activity.template : activity.stem;
+const CONDENSED_KEY = "helloword.reader.condensed";
+const condensedListeners = new Set<() => void>();
+
+function subscribeCondensed(listener: () => void) {
+  condensedListeners.add(listener);
+  return () => {
+    condensedListeners.delete(listener);
+  };
 }
 
-export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }: ReaderShellProps) {
+function readCondensed(): "0" | "1" | null {
+  try {
+    const stored = window.localStorage.getItem(CONDENSED_KEY);
+    return stored === "0" || stored === "1" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function fromPending(extract: ExtractRow): ResolvedProposal {
+  return {
+    id: extract.id,
+    extractId: extract.id,
+    exact: extract.body_md,
+    priority: extract.priority,
+    reason: extract.suggestion_reason ?? "",
+    concepts: extract.suggestion_concepts,
+    selector: extract.selector,
+    state: "pending",
+  };
+}
+
+export function ReaderShell({
+  source,
+  initialExtracts,
+  initialProposals = [],
+  distill,
+  initialNote,
+  pdfFileUrl,
+}: ReaderShellProps) {
+  const router = useRouter();
   const [extracts, setExtracts] = useState(initialExtracts);
-  const [proposals, setProposals] = useState<ResolvedProposal[]>([]);
+  const [proposals, setProposals] = useState<ResolvedProposal[]>(() =>
+    initialProposals.map(fromPending),
+  );
+  // A source nobody has distilled yet starts distilling the moment it is opened.
+  // The outcome comes back as props (the page keys this component on the
+  // status), so the only local state is a retry the reader asked for.
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string>();
+  const distilling = distill?.status === "none" || retrying;
+  const distillError =
+    retryError ??
+    (distill?.status === "failed"
+      ? (distill.error ?? "Distilling failed.")
+      : distill?.status === "extracting"
+        ? // Still running elsewhere, or a function that ran out of time.
+          "Still looking for passages, or the last attempt was cut short."
+        : undefined);
   const [loading, setLoading] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
   const [status, setStatus] = useState<string>();
@@ -53,6 +111,26 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
   const [selection, setSelection] = useState<SourceSelection | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number } | null>(null);
   const [manualStatus, setManualStatus] = useState<string>();
+  // The stored choice wins; with none, condense whenever there is something to
+  // condense to. The server snapshot is "full" so hydration always agrees.
+  const storedCondensed = useSyncExternalStore(
+    subscribeCondensed,
+    readCondensed,
+    () => "0" as const,
+  );
+  const condensed =
+    storedCondensed === null
+      ? initialExtracts.length + initialProposals.length > 0
+      : storedCondensed === "1";
+
+  function toggleCondensed() {
+    try {
+      window.localStorage.setItem(CONDENSED_KEY, condensed ? "0" : "1");
+    } catch {
+      // Private mode: the choice cannot be remembered, so it cannot change.
+    }
+    for (const listener of condensedListeners) listener();
+  }
 
   const paintedExtracts = useMemo<PaintedExtract[]>(
     () =>
@@ -153,6 +231,48 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [clozeSelection, extractSelection, selection]);
 
+  const sourceId = source.id;
+  const needsDistill = distill?.status === "none";
+  useEffect(() => {
+    if (!needsDistill) return;
+    const controller = new AbortController();
+    fetch(`/api/distill/source/${sourceId}`, { method: "POST", signal: controller.signal })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!controller.signal.aborted) router.refresh();
+      });
+    return () => controller.abort();
+  }, [needsDistill, router, sourceId]);
+
+  async function retryDistill() {
+    setRetrying(true);
+    setRetryError(undefined);
+    try {
+      const response = await fetch(`/api/distill/source/${sourceId}?force=1`, { method: "POST" });
+      const body = await readJson<{ error?: string }>(response, "Could not distill this source.");
+      if (!response.ok) throw new Error(body.error || "Could not distill this source.");
+      router.refresh();
+    } catch (error) {
+      setRetryError(error instanceof Error ? error.message : "Could not distill this source.");
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  async function patchPending(extractId: string, action: "keep" | "dismiss") {
+    const response = await fetch(`/api/extracts/${extractId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const body = await readJson<{ extract?: ExtractRow; error?: string }>(
+      response,
+      "Could not update the proposal.",
+    );
+    if (!response.ok || !body.extract) throw new Error(body.error || "Could not update the proposal.");
+    return body.extract;
+  }
+
   async function requestProposals(): Promise<ResolvedProposal[]> {
     setLoading(true);
     setStatus(undefined);
@@ -206,6 +326,22 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
 
   async function accept(proposal: ResolvedProposal): Promise<"created" | "duplicate" | "failed"> {
     updateProposal(proposal.id, { state: "saving", message: undefined });
+    if (proposal.extractId) {
+      try {
+        const kept = await patchPending(proposal.extractId, "keep");
+        setExtracts((current) =>
+          current.some((extract) => extract.id === kept.id) ? current : [...current, kept],
+        );
+        updateProposal(proposal.id, { state: "accepted", message: "Accepted." });
+        return "created";
+      } catch (error) {
+        updateProposal(proposal.id, {
+          state: "error",
+          message: error instanceof Error ? error.message : "Could not save extract.",
+        });
+        return "failed";
+      }
+    }
     try {
       const response = await fetch("/api/extracts", {
         method: "POST",
@@ -246,7 +382,17 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
   }
 
   function reject(id: string) {
+    const stored = proposals.find((proposal) => proposal.id === id)?.extractId;
     updateProposal(id, { state: "rejected", message: "Dismissed." });
+    // A stored proposal has to be dismissed for real, or it stays in the queue.
+    if (stored) {
+      patchPending(stored, "dismiss").catch((error: unknown) => {
+        updateProposal(id, {
+          state: "error",
+          message: error instanceof Error ? error.message : "Could not dismiss.",
+        });
+      });
+    }
   }
 
   async function runAuto() {
@@ -405,8 +551,25 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
               </a>
             </p>
           ) : null}
+          <div className="mb-4 flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">
+              {condensed
+                ? "Key passages only. Click a gap to read what was around it."
+                : "Full source."}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-pressed={condensed}
+              onClick={toggleCondensed}
+              disabled={!condensed && extracts.length + paintedProposals.length === 0}
+            >
+              {condensed ? "Show full source" : "Condense"}
+            </Button>
+          </div>
           <SourcePane
             markdown={source.markdown}
+            condensed={condensed}
             extracts={paintedExtracts}
             proposals={paintedProposals}
             onSelectionChange={(next) => {
@@ -480,34 +643,12 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
               </Button>
             </div>
             {activityStatus && <p className="mt-3 text-xs text-muted-foreground">{activityStatus}</p>}
-            <ul className="mt-4 space-y-3">
-              {activityDrafts.map((activity, index) => (
-                <li key={`${activity.type}-${index}`} className="rounded-lg border bg-card p-3 text-sm">
-                  <label className="flex cursor-pointer items-start gap-3">
-                    <Checkbox
-                      checked={selectedActivities.has(index)}
-                      onCheckedChange={(checked) => toggleActivity(index, checked === true)}
-                      aria-label={`Select ${activity.type} activity`}
-                    />
-                    <span className="min-w-0">
-                      <Badge variant="outline">{activity.type.replace("_", " ")}</Badge>
-                      <span className="mt-2 block font-medium">{activityPrompt(activity)}</span>
-                      {activity.type === "mcq" && (
-                        <span className="mt-2 block text-xs text-muted-foreground">
-                          {activity.options.map((option, optionIndex) => `${optionIndex + 1}. ${option}`).join(" · ")}
-                        </span>
-                      )}
-                      {activity.type === "select_all" && (
-                        <span className="mt-2 block text-xs text-muted-foreground">{activity.options.join(" · ")}</span>
-                      )}
-                      {activity.type === "closed" && (
-                        <span className="mt-2 block text-xs text-muted-foreground">Answer: {activity.answer}</span>
-                      )}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+            <ActivityDraftList
+              className="mt-4 space-y-3"
+              activities={activityDrafts}
+              selected={selectedActivities}
+              onToggle={toggleActivity}
+            />
             {activityDrafts.length > 0 && (
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <Button
@@ -549,6 +690,23 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
           </div>
         </div>
         {status && <p className="mt-3 text-xs text-muted-foreground">{status}</p>}
+        {distilling ? (
+          <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
+            Reading this source for passages worth keeping…
+          </p>
+        ) : null}
+        {distillError && !distilling ? (
+          <p className="mt-3 text-xs text-destructive" role="alert">
+            {distillError}{" "}
+            <button
+              type="button"
+              className="underline underline-offset-2"
+              onClick={() => void retryDistill()}
+            >
+              Try again
+            </button>
+          </p>
+        ) : null}
         <ul className="mt-5 space-y-3">
           {proposals.map((proposal) => (
             <li key={proposal.id} className="rounded-lg border bg-card p-3 text-sm">
