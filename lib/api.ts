@@ -57,6 +57,12 @@ export const CreateSourceBody = z.object({
   storage_key: z.string().optional(),
 });
 
+export const CreateNoteBody = z.object({
+  title: z.string().trim().min(1).max(200).default("Untitled note"),
+  body_md: z.string().max(1_000_000).default(""),
+  notebook_id: z.string().uuid().optional(),
+});
+
 export const PatchNoteBody = z.object({
   title: z.string().min(1).optional(),
   body_md: z.string().optional(),
@@ -133,6 +139,7 @@ export const NotebookItemBody = z.object({
 export const DiagnosticsResponse = Diagnostics;
 
 export type CreateSourceBody = z.infer<typeof CreateSourceBody>;
+export type CreateNoteBody = z.infer<typeof CreateNoteBody>;
 export type PatchNoteBody = z.infer<typeof PatchNoteBody>;
 export type CreateExtractBody = z.infer<typeof CreateExtractBody>;
 export type AiExtractsBody = z.infer<typeof AiExtractsBody>;

@@ -3,13 +3,13 @@ import { notFound } from "next/navigation";
 import { Sparkline } from "@/components/sparkline";
 import { diagnosticsForNotebook } from "@/lib/diagnostics/notebook";
 import { hashBody } from "@/lib/hash";
-import { getExtract } from "@/lib/store/extracts";
-import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
-import { getNote } from "@/lib/store/notes";
 import { itemPreviewSrc } from "@/lib/store/previews";
-import { getActivity } from "@/lib/store/review";
-import { getSource } from "@/lib/store/sources";
+import { getExtract, listExtracts } from "@/lib/store/extracts";
+import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
+import { getNote, listNotes } from "@/lib/store/notes";
+import { getActivity, listActivities } from "@/lib/store/review";
 import { resolveNotebookColor } from "@/lib/themes";
+import { getSource, listSources } from "@/lib/store/sources";
 import {
   activityItem,
   extractItem,
@@ -40,6 +40,20 @@ export default async function NotebookDetailPage({
       membership.map((item) => resolve(item.item_type, item.item_id)),
     )
   ).filter((item) => item !== null);
+
+  const [sources, notes, extracts, activities] = await Promise.all([
+    listSources(),
+    listNotes(),
+    listExtracts(),
+    listActivities(),
+  ]);
+  const member = new Set(membership.map((m) => `${m.item_type}:${m.item_id}`));
+  const libraryItems = [
+    ...sources.map(sourceItem),
+    ...notes.map(noteItem),
+    ...extracts.map(extractItem),
+    ...activities.map(activityItem),
+  ].filter((item) => !member.has(`${item.type}:${item.id}`));
 
   const diag = await diagnosticsForNotebook(id);
   const hasDiagnostics =
@@ -72,8 +86,8 @@ export default async function NotebookDetailPage({
 
       {!hasDiagnostics ? (
         <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-          Nothing to diagnose yet. Add notes or extracts from the Library and
-          the concept breakdown appears here.
+          Nothing to diagnose yet. Add notes or extracts to this notebook and the
+          concept breakdown appears here.
         </p>
       ) : (
         <NotebookDiagnostics
@@ -106,6 +120,7 @@ export default async function NotebookDetailPage({
       <NotebookContents
         notebookId={id}
         items={items}
+        libraryItems={libraryItems}
         initialView={fromQuery ? viewParam : "cards"}
         fromQuery={fromQuery}
       />

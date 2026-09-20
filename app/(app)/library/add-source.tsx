@@ -8,9 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-/** Vercel caps a serverless request body at 4.5 MB; presign anything near it. */
-const DIRECT_UPLOAD_LIMIT = 4 * 1024 * 1024;
+import { addUrl, FILE_ACCEPT, uploadFile } from "@/lib/client/upload";
 
 type Candidate = {
   title: string;
@@ -39,15 +37,9 @@ export function AddSource() {
     setBusy(true);
     setError(null);
 
-    const response = await fetch("/api/sources", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ kind: "url", origin_uri: target.trim() }),
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      done(body.error ?? `Could not add that URL (${response.status}).`);
+    const result = await addUrl(target);
+    if (!result.ok) {
+      done(result.error);
       return;
     }
 
@@ -59,25 +51,11 @@ export function AddSource() {
     done();
   }
 
-  async function uploadPdf(file: File) {
+  async function upload(file: File) {
     setBusy(true);
     setError(null);
-
-    try {
-      const created =
-        file.size > DIRECT_UPLOAD_LIMIT
-          ? await uploadViaPresign(file)
-          : await uploadDirect(file);
-
-      if (!created.ok) {
-        const body = await created.json().catch(() => ({}));
-        done(body.error ?? `Upload failed (${created.status}).`);
-        return;
-      }
-      done();
-    } catch (cause) {
-      done(cause instanceof Error ? cause.message : "Upload failed.");
-    }
+    const result = await uploadFile(file);
+    done(result.ok ? undefined : result.error);
   }
 
   async function refreshFeeds() {
@@ -108,7 +86,7 @@ export function AddSource() {
             <Link2 className="size-4" /> URL
           </TabsTrigger>
           <TabsTrigger value="pdf">
-            <FileText className="size-4" /> PDF
+            <FileText className="size-4" /> File
           </TabsTrigger>
           <TabsTrigger value="feeds">
             <Rss className="size-4" /> Feeds
@@ -144,18 +122,18 @@ export function AddSource() {
         <TabsContent value="pdf" className="pt-3">
           <Input
             type="file"
-            accept="application/pdf,.pdf"
+            accept={FILE_ACCEPT}
             disabled={busy}
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (file) void uploadPdf(file);
+              if (file) void upload(file);
             }}
           />
           <p className="mt-2 text-xs text-muted-foreground">
-            Text-layer PDFs are read by unpdf. A scanned one goes to Gemini page
-            vision. The original is archived so the reader can open the pages.
-            Files over 4 MB need DigitalOcean Spaces.
+            PDFs become sources: text-layer ones are read by unpdf, scanned ones
+            go to Gemini page vision. Markdown and text files become notes.
+            PDFs over 4 MB need DigitalOcean Spaces.
           </p>
         </TabsContent>
 
@@ -219,54 +197,4 @@ export function AddSource() {
       ) : null}
     </section>
   );
-}
-
-function uploadDirect(file: File): Promise<Response> {
-  const form = new FormData();
-  form.set("file", file);
-  return fetch("/api/sources", { method: "POST", body: form });
-}
-
-/**
- * Large PDFs go straight to Spaces and only the key comes back through the API.
- * If the bucket has no CORS rule the PUT fails, so fall back to the direct path
- * and let the platform limit be the thing that complains.
- */
-async function uploadViaPresign(file: File): Promise<Response> {
-  const presigned = await fetch("/api/sources/upload", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ filename: file.name }),
-  });
-
-  // 503 means Spaces is unset. Falling back to multipart would hit the
-  // 4.5 MB platform cap, so surface the presign error instead.
-  if (!presigned.ok) {
-    if (presigned.status === 503) return presigned;
-    return uploadDirect(file);
-  }
-
-  const { key, url, origin_uri } = await presigned.json();
-
-  try {
-    const put = await fetch(url, {
-      method: "PUT",
-      body: file,
-      headers: { "content-type": "application/pdf" },
-    });
-    if (!put.ok) return uploadDirect(file);
-  } catch {
-    return uploadDirect(file);
-  }
-
-  return fetch("/api/sources", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      kind: "pdf",
-      title: file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " "),
-      origin_uri,
-      storage_key: key,
-    }),
-  });
 }

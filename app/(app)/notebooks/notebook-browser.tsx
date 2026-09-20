@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { UploadCloud } from "lucide-react";
 import { Sparkline } from "@/components/sparkline";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,7 +17,9 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { cn } from "@/lib/utils";
 import { NewNotebook } from "./new-notebook";
+import { useFileDrop, useNotebookUpload } from "./use-notebook-upload";
 import {
   useWorkspaceView,
   WorkspaceViewToggle,
@@ -68,7 +71,7 @@ export function NotebookBrowser({
           <EmptyHeader>
             <EmptyTitle>No notebooks yet</EmptyTitle>
             <EmptyDescription>
-              Create one, then add sources to it from the Library.
+              Create one, then drop files onto it or open it to add sources and notes.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -118,10 +121,29 @@ function NotebookRow({ notebook }: { notebook: NotebookCardModel }) {
 
 function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
   const sparkHasReviews = notebook.spark.some((value) => value > 0);
+  const { upload, busy, notice, supported } = useNotebookUpload(notebook.id);
+  const { active, handlers } = useFileDrop((files) => void upload(files));
 
   return (
-    <Link href={`/notebooks/${notebook.id}`}>
-      <Card className="h-full pt-0 transition-shadow hover:shadow-md">
+    <Link href={`/notebooks/${notebook.id}`} {...handlers} draggable={false}>
+      <Card
+        className={cn(
+          "relative h-full pt-0 transition-shadow hover:shadow-md",
+          active && "ring-2 ring-primary",
+        )}
+      >
+        {active || busy || notice ? (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex aspect-[16/10] items-center justify-center bg-background/80 px-4 text-center text-sm font-medium backdrop-blur-sm">
+            <span className="flex items-center gap-2">
+              <UploadCloud className="size-4 shrink-0" />
+              {active
+                ? `Drop ${supported} to add`
+                : busy
+                  ? "Adding…"
+                  : notice?.text}
+            </span>
+          </div>
+        ) : null}
         {notebook.coverSrc ? (
           <img
             src={notebook.coverSrc}

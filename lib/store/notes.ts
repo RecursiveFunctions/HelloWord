@@ -69,6 +69,38 @@ export async function updateNote(
   return row;
 }
 
+export async function createNote(input: {
+  title: string;
+  body_md?: string;
+}): Promise<NoteRow> {
+  const title = input.title.trim() || "Untitled note";
+  const body = normalizeMarkdown(input.body_md ?? "");
+  const bodyHash = hashBody(body);
+
+  if (dbConfigured()) {
+    const rows = await query(
+      `insert into note (title, body_md, body_hash, origin)
+       values ($1, $2, $3, 'human')
+       returning ${COLUMNS}`,
+      [title, body, bodyHash],
+    );
+    return hydrate(rows[0]);
+  }
+
+  const now = new Date().toISOString();
+  const row: NoteRow = {
+    id: crypto.randomUUID(),
+    title,
+    body_md: body,
+    body_hash: bodyHash,
+    origin: "human",
+    created_at: now,
+    updated_at: now,
+  };
+  memory().notes.unshift(row);
+  return row;
+}
+
 export async function listNotesByIds(ids: string[]): Promise<NoteRow[]> {
   if (ids.length === 0) return [];
   if (dbConfigured()) {
