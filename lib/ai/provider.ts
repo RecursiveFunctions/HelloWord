@@ -21,6 +21,12 @@ export type Provider = {
   maxTokensParam: "max_tokens" | "max_completion_tokens";
   /** NVIDIA Nemotron NIM accepts native chat-template thinking controls. */
   supportsNemotronReasoning: boolean;
+  /**
+   * Pin thinking off no matter what the caller asks for. A trtllm-serve
+   * deployment running without `--reasoning_parser` has nowhere to put a
+   * thinking trace, so it prefixes the trace onto `content`.
+   */
+  forceThinkingDisabled: boolean;
   client: OpenAI;
 };
 
@@ -62,6 +68,7 @@ export function chatProviders(): Provider[] {
       model: env.nvidia.model,
       maxTokensParam: "max_tokens",
       supportsNemotronReasoning: true,
+      forceThinkingDisabled: env.nvidia.forceThinkingDisabled,
       client: clientFor(env.nvidia.baseUrl, env.nvidia.apiKey),
     });
   }
@@ -73,6 +80,7 @@ export function chatProviders(): Provider[] {
       model: env.digitalOcean.model,
       maxTokensParam: "max_completion_tokens",
       supportsNemotronReasoning: false,
+      forceThinkingDisabled: false,
       client: clientFor(env.digitalOcean.baseUrl, env.digitalOcean.apiKey),
     });
   }
@@ -93,6 +101,7 @@ export function embeddingProvider(): Provider | null {
     model: env.nvidia.embeddingModel,
     maxTokensParam: "max_tokens",
     supportsNemotronReasoning: false,
+    forceThinkingDisabled: false,
     client: clientFor(env.nvidia.embeddingBaseUrl, env.nvidia.embeddingApiKey),
   };
 }

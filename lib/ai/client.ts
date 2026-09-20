@@ -147,16 +147,30 @@ type Completion = {
 
 const THINKING_BUDGET = { low: 256, medium: 1024, high: 4096 } as const;
 
+/**
+ * `thinking_budget` is advisory. A self-hosted trtllm-serve does not validate
+ * `chat_template_kwargs` at all, so an unknown key is accepted and ignored
+ * rather than rejected. Treat the budget as a hint, never as a guarantee that
+ * the trace stays small.
+ */
 function thinkingControls(
   mode: ChatJsonRequest["reasoningMode"],
+  forceDisabled: boolean,
 ): { enable_thinking: boolean; thinking_budget?: number } | undefined {
+  if (forceDisabled) return { enable_thinking: false };
   if (!mode) return undefined;
   if (mode === "disabled") return { enable_thinking: false };
   return { enable_thinking: true, thinking_budget: THINKING_BUDGET[mode] };
 }
 
 export function buildChatBody(
-  provider: Pick<Provider, "model" | "maxTokensParam" | "supportsNemotronReasoning">,
+  provider: Pick<
+    Provider,
+    | "model"
+    | "maxTokensParam"
+    | "supportsNemotronReasoning"
+    | "forceThinkingDisabled"
+  >,
   req: ChatJsonRequest,
   schema: z.ZodType,
   guided: boolean,
@@ -169,7 +183,10 @@ export function buildChatBody(
     [provider.maxTokensParam]: req.maxTokens,
   };
   if (req.topP !== undefined) body.top_p = req.topP;
-  const chatTemplateKwargs = thinkingControls(req.reasoningMode);
+  const chatTemplateKwargs = thinkingControls(
+    req.reasoningMode,
+    provider.forceThinkingDisabled,
+  );
   if (provider.supportsNemotronReasoning && chatTemplateKwargs) {
     body.chat_template_kwargs = chatTemplateKwargs;
   }
@@ -180,7 +197,9 @@ export function buildChatBody(
         type: "json_schema",
         json_schema: { name: req.name, schema: jsonSchema, strict: true },
       };
-      body.nvext = { guided_json: jsonSchema };
+      // No `nvext.guided_json`. Both integrate.api.nvidia.com and a
+      // self-hosted trtllm-serve reject the field outright, so sending it
+      // turned the first attempt of every guided call into a wasted 400.
     }
   }
   return body;
