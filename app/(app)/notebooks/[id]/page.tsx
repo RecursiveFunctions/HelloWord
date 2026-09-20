@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import { notFound } from "next/navigation";
 import { Sparkline } from "@/components/sparkline";
 import { diagnosticsForNotebook } from "@/lib/diagnostics/notebook";
@@ -62,27 +62,22 @@ export default async function NotebookDetailPage({
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-sm text-muted-foreground">
-          <Link href="/notebooks" className="hover:underline">
-            Notebooks
-          </Link>
-        </p>
-        <div className="mt-2 flex items-center gap-3">
-          <span
-            className="size-3 rounded-full"
-            style={{ background: color }}
-          />
-          <h1 className="font-heading text-3xl tracking-tight">
-            {notebook.name}
-          </h1>
-        </div>
-        {notebook.description ? (
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            {notebook.description}
-          </p>
-        ) : null}
-      </header>
+      <PageHeader
+        className="mb-0"
+        breadcrumb={[
+          { label: "Notebooks", href: "/notebooks" },
+          {
+            label: notebook.name,
+            icon: (
+              <span
+                className="size-3 shrink-0 rounded-full"
+                style={{ background: color }}
+              />
+            ),
+          },
+        ]}
+        description={notebook.description || undefined}
+      />
 
       {!hasDiagnostics ? (
         <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">

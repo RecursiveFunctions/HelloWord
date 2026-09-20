@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { UploadCloud } from "lucide-react";
 import { Sparkline } from "@/components/sparkline";
@@ -11,12 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import { NewNotebook } from "./new-notebook";
 import { useFileDrop, useNotebookUpload } from "./use-notebook-upload";
@@ -49,40 +44,36 @@ export function NotebookBrowser({
 
   return (
     <div>
-      <header className="mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <h1 className="font-heading text-3xl tracking-tight">Notebooks</h1>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        className="mb-8"
+        title="Notebooks"
+        description="Saved collections of sources, notes, extracts, and activities. Nothing is owned by a notebook — membership is a join table, so one source can live in many places."
+        actions={
+          <>
             {items.length > 0 ? (
               <WorkspaceViewToggle view={view} onChange={choose} />
             ) : null}
             <NewNotebook />
-          </div>
-        </div>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Saved collections of sources, notes, extracts, and activities.
-          Nothing is owned by a notebook — membership is a join table, so one
-          source can live in many places.
-        </p>
-      </header>
+          </>
+        }
+      />
 
       {items.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>No notebooks yet</EmptyTitle>
-            <EmptyDescription>
-              Create one, then drop files onto it or open it to add sources and notes.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <NewNotebook variant="card" />
+        </div>
       ) : view === "list" ? (
-        <ul className="divide-y rounded-xl border bg-card">
-          {items.map((notebook) => (
-            <NotebookRow key={notebook.id} notebook={notebook} />
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <NewNotebook variant="row" />
+          <ul className="divide-y rounded-xl border bg-card">
+            {items.map((notebook) => (
+              <NotebookRow key={notebook.id} notebook={notebook} />
+            ))}
+          </ul>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <NewNotebook variant="card" />
           {items.map((notebook) => (
             <NotebookCard key={notebook.id} notebook={notebook} />
           ))}
@@ -97,7 +88,7 @@ function NotebookRow({ notebook }: { notebook: NotebookCardModel }) {
     <li>
       <Link
         href={`/notebooks/${notebook.id}`}
-        className="flex items-start gap-3 px-4 py-2.5 text-sm"
+        className="flex min-h-14 items-start gap-3 px-4 py-3 text-sm"
       >
         <span
           className="mt-1.5 size-2.5 shrink-0 rounded-full"

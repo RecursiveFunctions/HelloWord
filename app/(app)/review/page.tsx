@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/page-header";
 import { dueCounts, queueSnapshot, toClientCard } from "@/lib/fsrs/queue";
 import { listNotebooks } from "@/lib/store/notebooks";
 import { getProfile } from "@/lib/store/review";
@@ -33,12 +34,11 @@ export default async function ReviewPage({
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-heading text-3xl tracking-tight">Review</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Practice makes perfect.
-        </p>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title="Review"
+        description="Practice makes perfect."
+      />
 
       <Reviewer
         notebooks={notebooks.map((row) => ({

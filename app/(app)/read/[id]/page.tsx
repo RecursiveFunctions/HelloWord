@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
 	Empty,
@@ -8,9 +8,9 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
-import { parseBlocks } from "@/lib/editor/blocks";
 import { extractNotes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
+import { getNotebook } from "@/lib/store/notebooks";
 import { getNote, listNotes } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
@@ -21,46 +21,29 @@ import { ReaderShell } from "./reader-shell";
 
 export const dynamic = "force-dynamic";
 
-/** Most ingested sources open with their own H1, so avoid printing it twice. */
-function documentLeadsWithTitle(markdown: string, title: string): boolean {
-	const [first] = parseBlocks(markdown);
-	return (
-		first?.kind === "heading" &&
-		first.level === 1 &&
-		first.span.text.trim().toLowerCase() === title.trim().toLowerCase()
-	);
-}
-
 function SourceHeader({
 	source,
 	detail,
-	showTitle,
+	notebook,
 }: {
 	source: SourceRow;
 	detail: string;
-	showTitle: boolean;
+	notebook: { id: string; name: string } | null;
 }) {
 	return (
-		<header className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 lg:px-10 lg:py-5">
-			<p className="truncate text-sm text-muted-foreground">
-				<Link href="/notebooks" className="hover:underline">
-					HelloWord
-				</Link>
-				<span className="mx-2">/</span>
-				<Link href="/library" className="hover:underline">
-					Library
-				</Link>
-				<span className="mx-2">/</span>
-				{source.kind}
-				{source.ingest_method ? ` · ${source.ingest_method}` : ""}
-			</p>
-			{showTitle ? (
-				<h1 className="mt-1 line-clamp-2 font-heading text-xl tracking-tight sm:mt-2 sm:text-2xl lg:text-3xl">
-					{source.title}
-				</h1>
-			) : null}
-			<p className="mt-1 truncate text-xs text-muted-foreground">{detail}</p>
-		</header>
+		<PageHeader
+			className="mb-0 shrink-0 px-4 pt-6 pb-4 sm:px-6 lg:px-10"
+			breadcrumb={[
+				...(notebook
+					? [
+							{ label: "Notebooks", href: "/notebooks" },
+							{ label: notebook.name, href: `/notebooks/${notebook.id}` },
+						]
+					: [{ label: "Library", href: "/library" }]),
+				{ label: source.title },
+			]}
+			meta={detail}
+		/>
 	);
 }
 
@@ -111,15 +94,22 @@ async function PdfNoteRail() {
 
 export default async function ReadPage({
 	params,
+	searchParams,
 }: {
 	params: Promise<{ id: string }>;
+	searchParams: Promise<{ notebook?: string }>;
 }) {
 	const { id } = await params;
-	const [source, rawExtracts] = await Promise.all([
+	const { notebook: notebookId } = await searchParams;
+	const [source, rawExtracts, notebookRow] = await Promise.all([
 		getSource(id),
 		listSourceExtracts(id),
+		notebookId ? getNotebook(notebookId) : null,
 	]);
 	if (!source) notFound();
+	const notebook = notebookRow
+		? { id: notebookRow.id, name: notebookRow.name }
+		: null;
 
 	const anchoredExtracts = rawExtracts.filter(
 		(e) => e.anchor_status !== "detached",
@@ -147,10 +137,6 @@ export default async function ReadPage({
 		ready && source.kind === "pdf" && hasPdf && !source.markdown;
 	const markdownReader = ready && Boolean(source.markdown);
 
-	const showTitle =
-		source.kind === "pdf" ||
-		!source.markdown ||
-		!documentLeadsWithTitle(source.markdown, source.title);
 	const linkedNoteId = extractNotes.find(({ extract_id }) =>
 		rawExtracts.some(({ id: extractId }) => extractId === extract_id),
 	)?.note_id;
@@ -165,7 +151,7 @@ export default async function ReadPage({
 				<SourceHeader
 					source={source}
 					detail={detail}
-					showTitle={showTitle}
+					notebook={notebook}
 				/>
 				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<ReaderShell
@@ -201,7 +187,7 @@ export default async function ReadPage({
 				<SourceHeader
 					source={source}
 					detail={detail}
-					showTitle={showTitle}
+					notebook={notebook}
 				/>
 
 				<div

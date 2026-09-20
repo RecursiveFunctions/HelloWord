@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +20,12 @@ import { NOTEBOOK_COLORS } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { uploadNotebookCover } from "./replace-cover";
 
-export function NewNotebook() {
+export function NewNotebook({
+  variant = "button",
+}: {
+  /** "button" for the header; "card" and "row" are big tiles that sit among the notebooks. */
+  variant?: "button" | "card" | "row";
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -78,9 +83,25 @@ export function NewNotebook() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus className="size-4" /> New notebook
-      </Button>
+      {variant === "button" ? (
+        <Button size="touch" onClick={() => setOpen(true)}>
+          <Plus /> New notebook
+        </Button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            "flex items-center justify-center gap-3 rounded-xl border-2 border-dashed text-muted-foreground transition-colors hover:border-primary hover:bg-accent/40 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            variant === "card"
+              ? "min-h-64 flex-col"
+              : "min-h-16 w-full flex-row",
+          )}
+        >
+          <Plus className={variant === "card" ? "size-12" : "size-7"} />
+          <span className="font-heading text-lg">New notebook</span>
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -106,6 +127,7 @@ export function NewNotebook() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Spaced repetition"
+                className="h-11 text-base"
                 autoFocus
               />
             </div>
@@ -139,7 +161,7 @@ export function NewNotebook() {
 
             <div className="grid gap-1.5">
               <Label>Colour</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-3">
                 {NOTEBOOK_COLORS.map((option) => (
                   <button
                     key={option.id}
@@ -148,11 +170,13 @@ export function NewNotebook() {
                     aria-pressed={color === option.swatch}
                     onClick={() => setColor(option.swatch)}
                     className={cn(
-                      "size-6 rounded-full shadow-[0_0_0_1px_rgba(0,0,0,0.12)] ring-offset-2 ring-offset-background transition-shadow",
+                      "flex size-10 items-center justify-center rounded-full text-white shadow-[0_0_0_1px_rgba(0,0,0,0.12)] ring-offset-2 ring-offset-background transition-shadow",
                       color === option.swatch && "ring-2 ring-ring",
                     )}
                     style={{ background: option.swatch }}
-                  />
+                  >
+                    {color === option.swatch ? <Check className="size-5" /> : null}
+                  </button>
                 ))}
               </div>
             </div>
@@ -167,11 +191,12 @@ export function NewNotebook() {
               <Button
                 type="button"
                 variant="outline"
+                size="touch"
                 onClick={() => setOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={busy || !name.trim()}>
+              <Button type="submit" size="touch" disabled={busy || !name.trim()}>
                 {busy ? <Spinner /> : null} Create
               </Button>
             </DialogFooter>

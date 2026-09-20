@@ -464,7 +464,7 @@ function CardSession({
   }, [checked, card.prompt, grade, reveal]);
 
   return (
-    <Card>
+    <Card className="mx-auto w-full max-w-3xl">
       <CardHeader className="gap-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Badge variant="outline">{card.type.replace("_", " ")}</Badge>
@@ -513,7 +513,7 @@ function CardSession({
                   }
                   disabled={busy}
                   onClick={() => void grade(rating.value)}
-                  className="h-auto flex-col items-start gap-0.5 py-2"
+                  className="h-auto min-h-14 flex-col items-start gap-0.5 py-2.5"
                 >
                   <span className="flex w-full items-center gap-1.5">
                     <kbd className="rounded border border-current/30 px-1 font-mono text-[10px] opacity-70">
@@ -536,7 +536,7 @@ function CardSession({
           {checked ? "Pick how it felt — 1-4, or Enter for the suggestion." : HINTS[card.type]}
         </p>
         {!checked ? (
-          <Button disabled={busy || !isAnswered(draft)} onClick={() => void reveal()}>
+          <Button size="touch" disabled={busy || !isAnswered(draft)} onClick={() => void reveal()}>
             {card.type === "closed" ? "Reveal" : "Check"}
           </Button>
         ) : null}
@@ -616,7 +616,7 @@ function QueueClear({
           <p className="text-sm">
             Next card is due in <strong>{humanize(waitMs)}</strong>.
           </p>
-          <Button disabled={skipping} onClick={onSkip}>
+          <Button size="touch" disabled={skipping} onClick={onSkip}>
             {skipping ? "Skipping…" : `Skip ahead ${humanize(waitMs)}`}
           </Button>
           <p className="text-xs text-muted-foreground">
