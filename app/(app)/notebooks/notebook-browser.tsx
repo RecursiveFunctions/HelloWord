@@ -224,7 +224,7 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
     />
     <DeleteNotebook
       notebook={notebook}
-      className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm sm:opacity-0 sm:transition-opacity sm:group-hover/notebook:opacity-100 sm:focus-visible:opacity-100"
+      className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover/notebook:opacity-100 pointer-fine:focus-visible:opacity-100"
     />
     </div>
   );

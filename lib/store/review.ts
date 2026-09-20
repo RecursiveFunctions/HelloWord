@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { dbConfigured, pool, query } from "@/lib/db";
 import type { ActivityPayload } from "@/lib/contracts/activity";
+import { seedReviewEvents } from "@/lib/seed";
 import { memory } from "./memory";
 import {
   isLive,
@@ -280,6 +281,59 @@ export async function recordReviewEvent(event: ReviewEventRow): Promise<void> {
     return;
   }
   memory().reviewEvents.push(event);
+}
+
+/**
+ * Raw review events at or after `sinceIso`, for the concepts given.
+ *
+ * `review_daily` is a continuous aggregate with a one-hour end offset, so a
+ * review recorded seconds ago is not in it yet. Callers read the materialized
+ * rollup for settled days and stitch these live rows on top, which is what
+ * makes a rating visible on the notebook diagnostics immediately.
+ */
+export async function listReviewEventsSince(
+  sinceIso: string,
+  conceptIds: string[],
+): Promise<ReviewEventRow[]> {
+  if (conceptIds.length === 0) return [];
+  if (dbConfigured()) {
+    const rows = await query(
+      `select time, activity_id, note_id, extract_id, concept_id, rating, state,
+              elapsed_days, scheduled_days, stability, difficulty, duration_ms, mode
+       from review_event
+       where time >= $1 and concept_id = any($2::uuid[])
+       order by time`,
+      [sinceIso, conceptIds],
+    );
+    return rows.map(hydrateReviewEvent);
+  }
+  // The fixture rollup and this session's own ratings both matter without a
+  // database, so the seed events are unioned in rather than read separately.
+  const wanted = new Set(conceptIds);
+  return [...seedReviewEvents, ...memory().reviewEvents].filter(
+    (event) =>
+      event.concept_id !== null &&
+      wanted.has(event.concept_id) &&
+      event.time >= sinceIso,
+  );
+}
+
+function hydrateReviewEvent(row: Record<string, unknown>): ReviewEventRow {
+  return {
+    time: isoString(row.time),
+    activity_id: String(row.activity_id),
+    note_id: row.note_id === null ? null : String(row.note_id),
+    extract_id: row.extract_id === null ? null : String(row.extract_id),
+    concept_id: row.concept_id === null ? null : String(row.concept_id),
+    rating: Number(row.rating) as ReviewEventRow["rating"],
+    state: Number(row.state),
+    elapsed_days: Number(row.elapsed_days),
+    scheduled_days: Number(row.scheduled_days),
+    stability: Number(row.stability),
+    difficulty: Number(row.difficulty),
+    duration_ms: row.duration_ms === null ? null : Number(row.duration_ms),
+    mode: String(row.mode) as ReviewEventRow["mode"],
+  };
 }
 
 const PROFILE_COLUMNS = `id, name, request_retention, maximum_interval,

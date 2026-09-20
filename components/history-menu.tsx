@@ -92,7 +92,7 @@ export function NotebookHistory({
   notebookId: string;
   notebookName: string;
   className?: string;
-  /** Cards hide the button until hover unless there is something to see. */
+  /** Cards hide the button until hover on mouse pointers, unless there is something to see. */
   alwaysVisible?: boolean;
 }) {
   const all = useHistory();
@@ -119,7 +119,7 @@ export function NotebookHistory({
               "relative text-muted-foreground",
               !alwaysVisible &&
                 removed.length === 0 &&
-                "sm:opacity-0 sm:transition-opacity sm:group-hover/notebook:opacity-100 sm:focus-visible:opacity-100",
+                "pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover/notebook:opacity-100 pointer-fine:focus-visible:opacity-100",
               className,
             )}
           />
