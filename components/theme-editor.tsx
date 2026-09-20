@@ -258,12 +258,16 @@ export function ThemeEditor() {
 function Preview() {
   return (
     <div className="rounded-2xl border bg-background p-4">
+      <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Preview
+      </p>
       <div className="rounded-xl border bg-card p-4 shadow-float">
         <p className="font-serif text-lg font-semibold">
           Spaced repetition, briefly
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Notes are the pivot; activities are scheduled from them.
+          Mark a passage while you read and it becomes a card. The scheduler
+          brings each card back just before you would forget it.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
@@ -276,6 +280,10 @@ function Preview() {
             Skip
           </span>
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          In the reader: Extract saves a passage, Cloze hides a phrase, Skip
+          moves on.
+        </p>
       </div>
     </div>
   );

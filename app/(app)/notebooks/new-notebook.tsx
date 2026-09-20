@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -107,10 +106,6 @@ export function NewNotebook({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New notebook</DialogTitle>
-            <DialogDescription>
-              A notebook collects references. Adding a source here does not move
-              it out of the Library.
-            </DialogDescription>
           </DialogHeader>
 
           <form
@@ -144,7 +139,7 @@ export function NewNotebook({
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="notebook-cover">Note screenshot</Label>
+              <Label htmlFor="notebook-cover">Cover image</Label>
               <Input
                 key={fileKey}
                 id="notebook-cover"

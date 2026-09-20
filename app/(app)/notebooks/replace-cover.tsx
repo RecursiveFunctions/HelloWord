@@ -17,7 +17,7 @@ export async function uploadNotebookCover(
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    return (body as { error?: string }).error ?? "Could not save that screenshot.";
+    return (body as { error?: string }).error ?? "Could not save that image.";
   }
   return null;
 }
@@ -63,7 +63,7 @@ export function ReplaceCover({ notebookId }: { notebookId: string }) {
         onClick={() => inputRef.current?.click()}
       >
         {busy ? <Spinner /> : null}
-        Replace screenshot
+        Replace cover
       </Button>
       {error ? (
         <p className="text-sm text-destructive" role="alert">

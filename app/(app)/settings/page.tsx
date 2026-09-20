@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Palette, Server, UserRound } from "lucide-react";
+import { Clock, Palette, UserRound } from "lucide-react";
 import { ClockPresets } from "@/components/clock-presets";
 import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
@@ -108,20 +108,6 @@ export default async function SettingsPage() {
             </Row>
           ) : null}
         </dl>
-      </PageSection>
-
-      <PageSection
-        title="Environment"
-        icon={Server}
-        description={
-          <>
-            Seed fixtures. Set until C&apos;s client is live:
-          </>
-        }
-      >
-        <code className="rounded-lg bg-muted px-3 py-2 font-mono text-base">
-          AI_MOCK=1
-        </code>
       </PageSection>
     </div>
   );
