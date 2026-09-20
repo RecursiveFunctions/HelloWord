@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deleteCoverBlob } from "@/lib/store/covers";
 import {
   deleteNotebook,
   getNotebook,
@@ -18,6 +19,7 @@ const PatchNotebookBody = z.object({
     )
     .nullable()
     .optional(),
+  cover_storage_key: z.null().optional(),
 });
 
 export async function GET(
@@ -41,6 +43,7 @@ export async function PATCH(
 
   const notebook = await updateNotebook(id, parsed.data);
   if (!notebook) return notFound("Notebook");
+  if (parsed.data.cover_storage_key === null) deleteCoverBlob(id);
   return ok({ notebook });
 }
 

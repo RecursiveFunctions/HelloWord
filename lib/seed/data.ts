@@ -73,6 +73,7 @@ export type SeedNotebook = {
   name: string;
   description: string;
   color: string;
+  cover_storage_key: string | null;
   created_at: string;
 };
 
@@ -114,6 +115,7 @@ export const notebooks: SeedNotebook[] = [
     name: "Spaced repetition",
     description: "FSRS, retention, and why we keep an A-factor beside the card rather than inside the model.",
     color: THEME_SWATCHES.yellow,
+    cover_storage_key: null,
     created_at: daysAgo(80),
   },
   {
@@ -121,6 +123,7 @@ export const notebooks: SeedNotebook[] = [
     name: "Incremental reading",
     description: "Queues, extracts, notes, and the human edit between highlighting and being tested.",
     color: THEME_SWATCHES.blue,
+    cover_storage_key: null,
     created_at: daysAgo(70),
   },
 ];

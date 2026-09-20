@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { hashBody } from "@/lib/hash";
 import {
   activityById,
   conceptExtracts,
@@ -17,6 +10,7 @@ import {
   extractById,
   noteById,
 } from "@/lib/seed";
+import { itemPreviewSrc } from "@/lib/store/previews";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
 import { resolveNotebookColor } from "@/lib/themes";
 import { getSource } from "@/lib/store/sources";
@@ -28,17 +22,21 @@ import {
   type LibraryItem,
 } from "../../library/items";
 import { NotebookContents } from "./notebook-contents";
+import { NotebookDiagnostics } from "./notebook-diagnostics";
 
 export const dynamic = "force-dynamic";
 
 export default async function NotebookDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { view: viewParam }] = await Promise.all([params, searchParams]);
   const notebook = await getNotebook(id);
   if (!notebook) notFound();
+  const fromQuery = viewParam === "list" || viewParam === "cards";
 
   const membership = await listNotebookItems(id);
   const items = (
@@ -80,63 +78,23 @@ export default async function NotebookDetailPage({
           the concept breakdown appears here.
         </p>
       ) : (
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Struggling</CardTitle>
-            <CardDescription>Hard or worse, or still unstable.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {diag.struggling.length === 0 ? (
-              <p className="text-muted-foreground">None right now.</p>
-            ) : (
-              diag.struggling.map((row) => (
-                <div key={row.concept}>
-                  <div className="font-medium">{row.concept}</div>
-                  <p className="text-muted-foreground">{row.why}</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Known</CardTitle>
-            <CardDescription>Recall holding across 90 days.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-1.5">
-            {diag.known.map((label) => (
-              <Badge key={label} variant="secondary">
-                {label}
-              </Badge>
-            ))}
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Untouched</CardTitle>
-            <CardDescription>Tagged, never reviewed.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-1.5">
-            {diag.untouched.length === 0 ? (
-              <p className="text-muted-foreground">Every concept has reviews.</p>
-            ) : (
-              diag.untouched.map((label) => (
-                <Badge key={label} variant="outline">
-                  {label}
-                </Badge>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
+        <NotebookDiagnostics
+          struggling={diag.struggling}
+          known={diag.known}
+          untouched={diag.untouched}
+        />
       )}
 
       {hasDiagnostics ? (
         <p className="text-sm text-muted-foreground">{diag.next_action}</p>
       ) : null}
 
-      <NotebookContents notebookId={id} items={items} />
+      <NotebookContents
+        notebookId={id}
+        items={items}
+        initialView={fromQuery ? viewParam : "cards"}
+        fromQuery={fromQuery}
+      />
     </div>
   );
 }
@@ -201,19 +159,49 @@ async function resolve(
   switch (type) {
     case "source": {
       const source = await getSource(itemId);
-      return source ? sourceItem(source) : null;
+      if (!source) return null;
+      return {
+        ...sourceItem(source),
+        previewSrc: itemPreviewSrc(
+          "source",
+          source.id,
+          source.markdown
+            ? `${source.ingest_status}-${hashBody(source.markdown)}`
+            : null,
+        ),
+      };
     }
     case "note": {
       const note = noteById(itemId);
-      return note ? noteItem(note) : null;
+      if (!note) return null;
+      return {
+        ...noteItem(note),
+        previewSrc: itemPreviewSrc("note", note.id, note.body_hash),
+      };
     }
     case "extract": {
       const extract = extractById(itemId);
-      return extract ? extractItem(extract) : null;
+      if (!extract) return null;
+      return {
+        ...extractItem(extract),
+        previewSrc: itemPreviewSrc(
+          "extract",
+          extract.id,
+          hashBody(extract.body_md),
+        ),
+      };
     }
     case "activity": {
       const activity = activityById(itemId);
-      return activity ? activityItem(activity) : null;
+      if (!activity) return null;
+      return {
+        ...activityItem(activity),
+        previewSrc: itemPreviewSrc(
+          "activity",
+          activity.id,
+          activity.source_body_hash,
+        ),
+      };
     }
     default:
       return null;

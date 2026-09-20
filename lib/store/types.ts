@@ -52,6 +52,11 @@ export type NotebookRow = {
   name: string;
   description: string | null;
   color: string | null;
+  /**
+   * Pointer to a screenshot of the note shown on the Notebooks card.
+   * Public paths start with `/`; uploads use `memory:{id}` or a Spaces key.
+   */
+  cover_storage_key: string | null;
   created_at: string;
 };
 

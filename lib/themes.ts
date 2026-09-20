@@ -70,3 +70,31 @@ export function resolveNotebookColor(color: string | null | undefined): string {
   if (!color) return "var(--color-primary)";
   return LEGACY_NOTEBOOK_COLORS[color] ?? color;
 }
+
+/**
+ * `next/og` / Satori only understands hex (and a few named colours). Theme
+ * wheel swatches are oklch, so cover and preview images need this map.
+ */
+const NOTEBOOK_COVER_HEX: Record<string, string> = {
+  [THEME_SWATCHES.red]: "#dc2626",
+  [THEME_SWATCHES.orange]: "#ea580c",
+  [THEME_SWATCHES.yellow]: "#ca8a04",
+  [THEME_SWATCHES.green]: "#16a34a",
+  [THEME_SWATCHES.blue]: "#2563eb",
+  [THEME_SWATCHES.purple]: "#9333ea",
+  [THEME_SWATCHES.pink]: "#db2777",
+  "#c2410c": "#c2410c",
+  "#1d4ed8": "#1d4ed8",
+  "#15803d": "#15803d",
+  "#7e22ce": "#7e22ce",
+  "#b91c1c": "#b91c1c",
+  "#0f766e": "#0f766e",
+};
+
+export function resolveNotebookCoverColor(
+  color: string | null | undefined,
+): string {
+  if (!color) return "#c2410c";
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  return NOTEBOOK_COVER_HEX[color] ?? "#c2410c";
+}

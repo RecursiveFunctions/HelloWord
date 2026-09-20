@@ -18,6 +18,7 @@ import {
   schedules as seedSchedules,
   sources as seedSources,
 } from "@/lib/seed";
+import { isPublicCoverPath, resetCoverBlobs } from "./covers";
 import { DEFAULT_FEEDS } from "./default-feeds";
 import type {
   ActivityRow,
@@ -51,7 +52,10 @@ function seeded(): MemoryTables {
       suggestion_reason: null,
       suggestion_concepts: [],
     })),
-    notebooks: seedNotebooks.map((notebook) => ({ ...notebook })),
+    notebooks: seedNotebooks.map((notebook) => ({
+      ...notebook,
+      cover_storage_key: notebook.cover_storage_key ?? null,
+    })),
     notebookItems: seedNotebookItems.map((item) => ({ ...item })),
     feeds: DEFAULT_FEEDS.map((feed, index) => ({
       id: `99999999-9999-4999-8999-99999999900${index + 1}`,
@@ -90,10 +94,29 @@ export function memory(): MemoryTables {
       Object.assign(existing, { [key]: value });
     }
   }
+
+  // A reload that *adds a column* to an existing table (cover_storage_key)
+  // should pick up the field without throwing away in-flight writes. Public
+  // SVG stills are no longer used as card faces.
+  if (existing.notebooks) {
+    for (const notebook of existing.notebooks) {
+      if (notebook.cover_storage_key === undefined) {
+        notebook.cover_storage_key = null;
+      }
+      if (
+        notebook.cover_storage_key &&
+        isPublicCoverPath(notebook.cover_storage_key)
+      ) {
+        notebook.cover_storage_key = null;
+      }
+    }
+  }
+
   return existing as MemoryTables;
 }
 
 /** Only for tests and the "reset demo data" affordance. */
 export function resetMemory(): void {
   holder.__helloword_memory = seeded();
+  resetCoverBlobs();
 }

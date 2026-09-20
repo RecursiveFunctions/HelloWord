@@ -21,6 +21,7 @@ export type LibraryItem = {
   href?: string;
   status?: IngestStatus;
   error?: string | null;
+  previewSrc?: string | null;
 };
 
 export function sourceItem(source: SourceRow): LibraryItem {

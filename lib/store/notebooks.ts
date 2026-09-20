@@ -1,4 +1,5 @@
 import { dbConfigured, query } from "@/lib/db";
+import { deleteCoverBlob } from "./covers";
 import { memory } from "./memory";
 import {
   isoString,
@@ -7,7 +8,7 @@ import {
   type NotebookRow,
 } from "./types";
 
-const COLUMNS = `id, name, description, color, created_at`;
+const COLUMNS = `id, name, description, color, cover_storage_key, created_at`;
 
 function hydrate(row: Record<string, unknown>): NotebookRow {
   return {
@@ -15,6 +16,7 @@ function hydrate(row: Record<string, unknown>): NotebookRow {
     name: String(row.name),
     description: (row.description as string | null) ?? null,
     color: (row.color as string | null) ?? null,
+    cover_storage_key: (row.cover_storage_key as string | null) ?? null,
     created_at: isoString(row.created_at),
   };
 }
@@ -54,12 +56,18 @@ export async function createNotebook(input: {
   name: string;
   description?: string | null;
   color?: string | null;
+  cover_storage_key?: string | null;
 }): Promise<NotebookRow> {
   if (dbConfigured()) {
     const rows = await query(
-      `insert into notebook (name, description, color)
-       values ($1, $2, $3) returning ${COLUMNS}`,
-      [input.name, input.description ?? null, input.color ?? null],
+      `insert into notebook (name, description, color, cover_storage_key)
+       values ($1, $2, $3, $4) returning ${COLUMNS}`,
+      [
+        input.name,
+        input.description ?? null,
+        input.color ?? null,
+        input.cover_storage_key ?? null,
+      ],
     );
     return hydrate(rows[0]);
   }
@@ -69,6 +77,7 @@ export async function createNotebook(input: {
     name: input.name,
     description: input.description ?? null,
     color: input.color ?? null,
+    cover_storage_key: input.cover_storage_key ?? null,
     created_at: new Date().toISOString(),
   };
   memory().notebooks.push(row);
@@ -77,7 +86,12 @@ export async function createNotebook(input: {
 
 export async function updateNotebook(
   id: string,
-  patch: { name?: string; description?: string | null; color?: string | null },
+  patch: {
+    name?: string;
+    description?: string | null;
+    color?: string | null;
+    cover_storage_key?: string | null;
+  },
 ): Promise<NotebookRow | null> {
   const entries = Object.entries(patch).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return getNotebook(id);
@@ -104,7 +118,9 @@ export async function deleteNotebook(id: string): Promise<boolean> {
     const rows = await query(`delete from notebook where id = $1 returning id`, [
       id,
     ]);
-    return rows.length > 0;
+    if (rows.length === 0) return false;
+    deleteCoverBlob(id);
+    return true;
   }
 
   const tables = memory();
@@ -114,6 +130,7 @@ export async function deleteNotebook(id: string): Promise<boolean> {
   tables.notebookItems = tables.notebookItems.filter(
     (item) => item.notebook_id !== id,
   );
+  deleteCoverBlob(id);
   return true;
 }
 
@@ -228,4 +245,32 @@ export async function membershipIndex(): Promise<Map<string, Set<string>>> {
     index.set(row.notebook_id, set);
   }
   return index;
+}
+
+/** Oldest note in the notebook, used as the generated card screenshot. */
+export async function firstNoteId(
+  notebookId: string,
+): Promise<string | null> {
+  const notes = (await listNotebookItems(notebookId))
+    .filter((item) => item.item_type === "note")
+    .sort((a, b) => Date.parse(a.added_at) - Date.parse(b.added_at));
+  return notes[0]?.item_id ?? null;
+}
+
+/** Notebooks that can fall back to an ImageResponse of a note. */
+export async function notebookIdsWithNotes(): Promise<Set<string>> {
+  let rows: NotebookItemRow[];
+
+  if (dbConfigured()) {
+    rows = (
+      await query(
+        `select notebook_id, item_type, item_id, added_at
+         from notebook_item where item_type = 'note'`,
+      )
+    ).map(hydrateItem);
+  } else {
+    rows = memory().notebookItems.filter((item) => item.item_type === "note");
+  }
+
+  return new Set(rows.map((row) => row.notebook_id));
 }
