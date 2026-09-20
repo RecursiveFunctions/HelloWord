@@ -10,6 +10,7 @@ import { buildSelector, isAnchorableRange, resolveExact } from "@/lib/anchor/sel
 import type { ExtractProposal, SelectorBundle } from "@/lib/contracts";
 import type { ActivityPayload } from "@/lib/contracts/activity";
 import type { ExtractRow, NoteRow } from "@/lib/store/types";
+import { NoteEditor } from "./note-editor";
 import { SourcePane, type PaintedExtract } from "./source-pane";
 
 type ResolvedProposal = ExtractProposal & {
@@ -456,12 +457,9 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
               value={noteTitle}
               onChange={(event) => setNoteTitle(event.target.value)}
             />
-            <Textarea
-              className="mt-3 min-h-44 font-mono text-xs"
-              aria-label="Note markdown"
-              value={noteBody}
-              onChange={(event) => setNoteBody(event.target.value)}
-            />
+            <div className="mt-3">
+              <NoteEditor body={noteBody} onBodyChange={setNoteBody} disabled={savingNote} />
+            </div>
             {noteStatus && <p className="mt-2 text-xs text-muted-foreground">{noteStatus}</p>}
             <div className="mt-5 flex items-center justify-between gap-3">
               <div>

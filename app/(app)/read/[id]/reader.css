@@ -31,3 +31,53 @@
   text-decoration: underline dashed color-mix(in oklab, var(--primary) 70%, transparent);
   text-underline-offset: 5px;
 }
+
+.note-editor-content .ProseMirror {
+  min-height: 10rem;
+  outline: none;
+}
+
+.note-editor-content .ProseMirror > * + * {
+  margin-top: 0.75rem;
+}
+
+.note-editor-content .ProseMirror h1,
+.note-editor-content .ProseMirror h2,
+.note-editor-content .ProseMirror h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.note-editor-content .ProseMirror h1 { font-size: 1.25rem; }
+.note-editor-content .ProseMirror h2 { font-size: 1.125rem; }
+.note-editor-content .ProseMirror h3 { font-size: 1rem; }
+
+.note-editor-content .ProseMirror ul,
+.note-editor-content .ProseMirror ol {
+  padding-left: 1.25rem;
+}
+
+.note-editor-content .ProseMirror ul { list-style: disc; }
+.note-editor-content .ProseMirror ol { list-style: decimal; }
+
+.note-editor-content .ProseMirror blockquote {
+  border-left: 2px solid color-mix(in oklab, var(--primary) 40%, transparent);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.note-editor-content .ProseMirror pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: var(--muted);
+  padding: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.note-editor-content .ProseMirror a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
