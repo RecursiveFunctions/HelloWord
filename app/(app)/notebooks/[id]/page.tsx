@@ -149,7 +149,11 @@ async function resolve(
       if (!extract) return null;
       return {
         ...extractItem(extract),
-        previewSrc: itemPreviewSrc("extract", extract.id, extract.body_hash),
+        previewSrc: itemPreviewSrc(
+          "extract",
+          extract.id,
+          hashBody(extract.body_md),
+        ),
       };
     }
     case "activity": {
