@@ -1,8 +1,7 @@
 # HelloWord
 
-A spaced repetition progressive web app built for SteelHacks XIII.
-
-> "HelloWord" is a placeholder name.
+A spaced repetition progressive web app built for SteelHacks XIII, live at
+[hello-word.tech](https://hello-word.tech).
 
 The app supports two runtime backends: committed in-memory fixtures for local
 development, and Tiger Cloud for persistent data and review diagnostics.
@@ -26,7 +25,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Notebooks, Library,
 Review, and Settings all render seed rows. Click a source to open the
-placeholder reader.
+reader.
 
 Apply the real schema later:
 
@@ -84,7 +83,6 @@ follows. Redeploy after changing a value.
 | `DO_INFERENCE_KEY`, `DO_INFERENCE_BASE_URL`, `DO_NEMOTRON_MODEL` | Unset | Live failover settings |
 | `GEMINI_API_KEY` | Unset | Live PDF/URL fallback |
 | `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_PAT`, `SNOWFLAKE_MODEL` | Unset | Live report provider |
-| `ELEVENLABS_API_KEY` | Unset | Add only when that integration is enabled |
 
 Do not add Production database or provider secrets to Preview scope. Preview
 APIs are write-capable and must not be able to mutate the Production database.
@@ -140,7 +138,7 @@ cp .env.example .env.local
 npm run smoke
 ```
 
-That makes a real Nemotron completion, a Snowflake Cortex REST call, and a Tiger Cloud connection. DigitalOcean inference is the Nemotron failover — optional until NVIDIA rate-limits, required for that track.
+That makes a real Nemotron completion, a Snowflake Cortex REST call, and a Tiger Cloud connection. DigitalOcean inference is the optional Nemotron failover, used when NVIDIA rate-limits.
 
 | Sponsor | Signup | What “prepared” means |
 |---|---|---|
@@ -148,32 +146,7 @@ That makes a real Nemotron completion, a Snowflake Cortex REST call, and a Tiger
 | Snowflake API | [signup.snowflake.com/?trial=student](https://signup.snowflake.com/?trial=student) (120 days). PAT + network-policy exception | `POST /api/v2/cortex/v1/chat/completions` with `X-Snowflake-Authorization-Token-Type: PROGRAMMATIC_ACCESS_TOKEN`. Not the legacy `inference:complete` path. |
 | Tiger Data | Tiger Console → **Free Plan**, not the 30-day trial, `us-east-1` | `DATABASE_URL` connects; the smoke verifies extensions, `review_event` hypertable, `review_daily` aggregate policy, migration, and DiskANN indexes. |
 
-Keep `AI_MOCK=1` until C’s client is live. Wave 1 UI work does not wait on these calls.
-
-## Frozen files (do not edit on a feature branch)
-
-A contract change is its own small PR to `main`. Everyone rebases onto it.
-
-- `db/schema.sql`
-- `lib/contracts/*`
-- `lib/api.ts`
-- `lib/db.ts`
-- `components/ui/*`
-
-## Workstreams
-
-Cut branches from this commit, prefixed `cursor/` per repo convention:
-
-| Branch | Owns | Builds against |
-|---|---|---|
-| `cursor/a-ingest` | `app/api/sources`, `feeds`, `notebooks`, `lib/ingest`, `lib/storage`, Notebooks + Library screens | seeded `source.markdown` |
-| `cursor/b-reader` | `app/read`, `lib/editor`, `lib/anchor`, `app/api/notes`, `app/api/extracts` | seeded markdown + `lib/ai/__fixtures__/extract-proposals.json` |
-| `cursor/c-ai` | `lib/ai`, `app/api/ai`, `app/api/report` (no UI) | fixtures first, then live Nemotron with `AI_MOCK=1` still working |
-| `cursor/d-review` | `app/(app)/review`, `settings`, `lib/fsrs`, `lib/diagnostics`, review/scheduler APIs | 40 seeded activities + 90 days of `review_event` |
-
-Additive migrations only, in your band: A `100-199`, B `200-299`, C `300-399`, D `400-499`.
-
-Plan of record: [PLAN.md](PLAN.md). Sponsor API notes: [docs/hackathon-sponsor-api-brief.md](docs/hackathon-sponsor-api-brief.md) and [docs/tigerdata-digitalocean-snowflake-api-brief.md](docs/tigerdata-digitalocean-snowflake-api-brief.md).
+Sponsor API notes: [docs/hackathon-sponsor-api-brief.md](docs/hackathon-sponsor-api-brief.md) and [docs/tigerdata-digitalocean-snowflake-api-brief.md](docs/tigerdata-digitalocean-snowflake-api-brief.md).
 
 ## Stack
 
@@ -182,12 +155,10 @@ TimescaleDB), `ts-fsrs`, NVIDIA Nemotron with DigitalOcean failover.
 
 ## Team
 
-| GitHub | Workstream |
-|---|---|
-| [@RecursiveFunctions](https://github.com/RecursiveFunctions) | TBD |
-| [@nullishew](https://github.com/nullishew) | TBD |
-| [@willyumm3rs](https://github.com/willyumm3rs) | TBD |
-| [@jkob15](https://github.com/jkob15) | TBD |
+[@RecursiveFunctions](https://github.com/RecursiveFunctions),
+[@nullishew](https://github.com/nullishew),
+[@willyumm3rs](https://github.com/willyumm3rs),
+[@jkob15](https://github.com/jkob15)
 
 ## Prior art and reused code
 
