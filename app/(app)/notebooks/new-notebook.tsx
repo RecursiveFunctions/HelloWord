@@ -108,8 +108,8 @@ export function NewNotebook({
           <DialogHeader>
             <DialogTitle>New notebook</DialogTitle>
             <DialogDescription>
-              A notebook collects references. Adding a source here does not move
-              it out of the Library.
+              Start a notebook for one topic. You can add sources to it
+              anytime.
             </DialogDescription>
           </DialogHeader>
 
