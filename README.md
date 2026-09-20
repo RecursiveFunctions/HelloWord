@@ -32,13 +32,13 @@ Apply the real schema later:
 
 ```bash
 psql "$DATABASE_URL" -f db/schema.sql
-psql "$DATABASE_URL" -f db/migrations/100_feeds.sql
-psql "$DATABASE_URL" -f db/migrations/200_extract_proposal_metadata.sql
-psql "$DATABASE_URL" -f db/migrations/201_extract_backed_activities.sql
-psql "$DATABASE_URL" -f db/migrations/400_review_clock.sql
+npm run db:migrate
 psql "$DATABASE_URL" -f db/seed.sql
 npm run smoke
 ```
+
+[db/README.md](db/README.md) has the full bootstrap, including the two
+backfills to re-run after seeding.
 
 `npm run db:generate-seed` rewrites `db/seed.sql` from `lib/seed`.
 Run the generated seed only against an empty service. See [db/README.md](db/README.md)
@@ -53,14 +53,21 @@ Hobby project with these settings:
 - Framework preset: **Next.js**
 - Root directory: repository root
 - Install command: `npm install` (the committed `package-lock.json` is used)
-- Build command: `npm run build`
+- Build command: `npm run vercel-build` (set in `vercel.json`): applies pending
+  migrations, then `next build`
 - Node.js version: **22.x**
 - Production branch: `main`
 
 `vercel.json` pins Server Functions to `iad1`, near the Tiger Cloud
 `us-east-1` service, and declares the longer source/AI function durations.
-Leave schema migrations and seed data out of the Vercel build. Provision the
-database once from a trusted workstation using [db/README.md](db/README.md).
+Provision the database once from a trusted workstation using
+[db/README.md](db/README.md); `schema.sql` and seed data stay out of the Vercel
+build. Additive migrations do not: the Production build runs
+`npm run db:migrate` first, because code that deployed ahead of a hand-applied
+migration is what took production down once. Preview has no `DATABASE_URL`, so
+Preview builds skip the step - and, running on fixtures, cannot show you a
+schema problem. `GET /api/health` on Production can: `schema.missing` should be
+empty.
 
 ### Environment variables
 

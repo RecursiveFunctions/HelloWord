@@ -11,6 +11,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
+    "vercel-build": "tsx scripts/migrate.ts && next build",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:status": "tsx scripts/migrate.ts --status",
     "db:generate-seed": "tsx scripts/generate-seed.ts",
     "smoke": "tsx scripts/smoke-sponsors.ts",
     "smoke:ai": "tsx scripts/ai-smoke.ts",
@@ -55,6 +58,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
