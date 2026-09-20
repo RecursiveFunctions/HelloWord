@@ -226,11 +226,16 @@ function NotebookCard({ notebook }: { notebook: NotebookCardModel }) {
             )}
           </div>
           {sparkHasReviews ? (
-            <Sparkline
-              values={notebook.spark}
-              color={notebook.color}
-              className="h-8 w-28 text-primary"
-            />
+            <div className="flex flex-col items-end gap-0.5">
+              <Sparkline
+                values={notebook.spark}
+                color={notebook.color}
+                className="h-8 w-28 text-primary"
+              />
+              <span className="text-[10px] text-muted-foreground">
+                Reviews: last 90 days
+              </span>
+            </div>
           ) : (
             <span className="text-xs text-muted-foreground">No reviews yet</span>
           )}
