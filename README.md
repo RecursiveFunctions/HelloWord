@@ -34,6 +34,7 @@ Apply the real schema later:
 psql "$DATABASE_URL" -f db/schema.sql
 psql "$DATABASE_URL" -f db/migrations/100_feeds.sql
 psql "$DATABASE_URL" -f db/migrations/200_extract_proposal_metadata.sql
+psql "$DATABASE_URL" -f db/migrations/201_extract_backed_activities.sql
 psql "$DATABASE_URL" -f db/migrations/400_review_clock.sql
 psql "$DATABASE_URL" -f db/seed.sql
 npm run smoke

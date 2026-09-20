@@ -11,6 +11,7 @@ database files in this order:
 psql "$DATABASE_URL" -f db/schema.sql
 psql "$DATABASE_URL" -f db/migrations/100_feeds.sql
 psql "$DATABASE_URL" -f db/migrations/200_extract_proposal_metadata.sql
+psql "$DATABASE_URL" -f db/migrations/201_extract_backed_activities.sql
 psql "$DATABASE_URL" -f db/migrations/400_review_clock.sql
 psql "$DATABASE_URL" -f db/seed.sql
 npm run smoke
@@ -20,6 +21,10 @@ npm run smoke
 an empty service. The smoke test verifies the `review_event` hypertable,
 `review_daily` continuous aggregate and refresh policy, additive review-clock
 migration, and DiskANN indexes.
+
+Existing services must apply every newly added migration before deploying code
+that uses its columns. In particular, apply `201_extract_backed_activities.sql`
+before deploying manual extract-backed clozes.
 
 With no `DATABASE_URL`, the app uses an in-memory fixture backend. With one, all
 runtime stores and notebook diagnostics read Tiger through the shared pool in
