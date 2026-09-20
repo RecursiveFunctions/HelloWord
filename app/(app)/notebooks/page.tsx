@@ -3,7 +3,6 @@ import { dueCounts } from "@/lib/fsrs/queue";
 import { notebookPreviewSrc } from "@/lib/store/previews";
 import { listNotebooks } from "@/lib/store/notebooks";
 import { resolveNotebookColor } from "@/lib/themes";
-import { NewNotebook } from "./new-notebook";
 import { NotebookBrowser } from "./notebook-browser";
 import { isWorkspaceView } from "./workspace-view";
 
@@ -44,22 +43,10 @@ export default async function NotebooksPage({
     fromQuery && isWorkspaceView(viewParam) ? viewParam : "cards";
 
   return (
-    <div>
-      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-3xl tracking-tight">Notebooks</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            What&apos;s on your mind?
-          </p>
-        </div>
-        <NewNotebook />
-      </header>
-
-      <NotebookBrowser
-        items={items}
-        initialView={initialView}
-        fromQuery={fromQuery}
-      />
-    </div>
+    <NotebookBrowser
+      items={items}
+      initialView={initialView}
+      fromQuery={fromQuery}
+    />
   );
 }

@@ -2,27 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hashBody } from "@/lib/hash";
 import {
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  conceptExtracts,
-  conceptNotes,
-  concepts,
-
   conceptExtracts,
   conceptNotes,
   concepts,
   diagnosticsForNotebook,
 } from "@/lib/seed";
 import { itemPreviewSrc } from "@/lib/store/previews";
-import { getExtract } from "@/lib/store/extracts";
-import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
-import { getNote } from "@/lib/store/notes";
 import { getExtract } from "@/lib/store/extracts";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
 import { getNote } from "@/lib/store/notes";
@@ -188,8 +173,6 @@ async function resolve(
     }
     case "note": {
       const note = await getNote(itemId);
-    case "note": {
-      const note = await getNote(itemId);
       if (!note) return null;
       return {
         ...noteItem(note),
@@ -219,7 +202,6 @@ async function resolve(
           activity.source_body_hash,
         ),
       };
-    }
     }
     default:
       return null;

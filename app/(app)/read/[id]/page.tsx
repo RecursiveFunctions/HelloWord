@@ -159,14 +159,14 @@ export default async function ReadPage({
 		return (
 			<div
 				data-full-bleed
-				className="flex h-full min-h-0 flex-col overflow-hidden"
+				className="flex min-h-0 flex-1 flex-col overflow-hidden"
 			>
 				<SourceHeader
 					source={source}
 					detail={detail}
 					showTitle={showTitle}
 				/>
-				<div className="min-h-0 flex-1">
+				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<ReaderShell
 						source={{
 							id: source.id,
@@ -175,12 +175,11 @@ export default async function ReadPage({
 						}}
 						initialExtracts={rawExtracts}
 						initialNote={note}
-pdfFileUrl={
-								source.kind === "pdf" && hasPdf
-									? `/api/sources/${source.id}/file`
-									: undefined
-							}
-
+						pdfFileUrl={
+							source.kind === "pdf" && hasPdf
+								? `/api/sources/${source.id}/file`
+								: undefined
+						}
 					/>
 				</div>
 			</div>
@@ -190,7 +189,7 @@ pdfFileUrl={
 	return (
 		<div
 			data-full-bleed
-			className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row"
+			className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row"
 		>
 			<div
 				className={cn(

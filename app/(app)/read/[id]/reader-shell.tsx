@@ -297,8 +297,8 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-8 sm:px-6 lg:px-10 max-lg:max-h-[45svh] max-lg:shrink-0 lg:max-h-none">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full lg:flex-row">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6 lg:px-10 max-lg:max-h-[45svh] max-lg:shrink-0 lg:max-h-none">
         <div className="mx-auto mt-6 max-w-2xl">
           {pdfFileUrl ? (
             <p className="mb-4 text-sm">
@@ -319,7 +319,7 @@ export function ReaderShell({ source, initialExtracts, initialNote, pdfFileUrl }
           />
         </div>
       </div>
-<aside className="flex min-h-0 min-w-0 w-full flex-1 shrink-0 flex-col overflow-y-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 max-h-[min(40svh,24rem)] lg:max-h-none lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
+      <aside className="flex min-h-0 min-w-0 w-full flex-1 shrink-0 flex-col overflow-y-auto overscroll-y-contain border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 max-h-[min(40svh,24rem)] lg:max-h-none lg:h-full lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[28rem]">
         {note && (
           <section className="mb-8 border-b pb-8">
             <div className="flex items-start justify-between gap-3">
