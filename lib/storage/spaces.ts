@@ -61,6 +61,22 @@ export function pdfKey(filename: string): string {
   return `sources/${crypto.randomUUID()}/${safeName(filename)}`;
 }
 
+export async function putBytes(
+  key: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<void> {
+  await client().send(
+    new PutObjectCommand({
+      Bucket: env.spaces.bucket!,
+      Key: key,
+      Body: bytes,
+      ContentType: contentType,
+      ACL: "private",
+    }),
+  );
+}
+
 /** The `origin_uri` we record for an uploaded PDF, matching the seed's format. */
 export function spacesUri(key: string): string {
   return `spaces://${env.spaces.bucket}/${key}`;

@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { NOTEBOOK_COLORS } from "@/lib/themes";
 import { cn } from "@/lib/utils";
+import { uploadNotebookCover } from "./replace-cover";
 
 export function NewNotebook() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export function NewNotebook() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(NOTEBOOK_COLORS[0].swatch);
+  const [cover, setCover] = useState<File | null>(null);
+  const [fileKey, setFileKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,16 +46,32 @@ export function NewNotebook() {
       }),
     });
 
-    setBusy(false);
-
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      setError(body.error ?? "Could not create that notebook.");
+      setBusy(false);
+      setError(
+        (body as { error?: string }).error ?? "Could not create that notebook.",
+      );
       return;
     }
 
+    const body = (await response.json()) as { notebook?: { id: string } };
+    const notebookId = body.notebook?.id;
+    if (notebookId && cover) {
+      const message = await uploadNotebookCover(notebookId, cover);
+      if (message) {
+        setBusy(false);
+        setError(message);
+        router.refresh();
+        return;
+      }
+    }
+
+    setBusy(false);
     setName("");
     setDescription("");
+    setCover(null);
+    setFileKey((key) => key + 1);
     setOpen(false);
     router.refresh();
   }
@@ -81,7 +100,7 @@ export function NewNotebook() {
             }}
           >
             <div className="grid gap-1.5">
-              <Label htmlFor="notebook-name">Name</Label>
+              <Label htmlFor="notebook-name">Topic name</Label>
               <Input
                 id="notebook-name"
                 value={name}
@@ -92,7 +111,7 @@ export function NewNotebook() {
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="notebook-description">Description</Label>
+              <Label htmlFor="notebook-description">Topic description</Label>
               <Textarea
                 id="notebook-description"
                 value={description}
@@ -100,6 +119,22 @@ export function NewNotebook() {
                 placeholder="What this collection is for."
                 rows={3}
               />
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="notebook-cover">Note screenshot</Label>
+              <Input
+                key={fileKey}
+                id="notebook-cover"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
+                onChange={(event) =>
+                  setCover(event.target.files?.[0] ?? null)
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. PNG, JPEG, WebP, or SVG, up to 2 MB.
+              </p>
             </div>
 
             <div className="grid gap-1.5">

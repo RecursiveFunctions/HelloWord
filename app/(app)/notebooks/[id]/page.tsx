@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { hashBody } from "@/lib/hash";
 import {
   activityById,
   conceptExtracts,
@@ -9,6 +10,7 @@ import {
   extractById,
   noteById,
 } from "@/lib/seed";
+import { itemPreviewSrc } from "@/lib/store/previews";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
 import { resolveNotebookColor } from "@/lib/themes";
 import { getSource } from "@/lib/store/sources";
@@ -26,12 +28,15 @@ export const dynamic = "force-dynamic";
 
 export default async function NotebookDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { view: viewParam }] = await Promise.all([params, searchParams]);
   const notebook = await getNotebook(id);
   if (!notebook) notFound();
+  const fromQuery = viewParam === "list" || viewParam === "cards";
 
   const membership = await listNotebookItems(id);
   const items = (
@@ -84,7 +89,12 @@ export default async function NotebookDetailPage({
         <p className="text-sm text-muted-foreground">{diag.next_action}</p>
       ) : null}
 
-      <NotebookContents notebookId={id} items={items} />
+      <NotebookContents
+        notebookId={id}
+        items={items}
+        initialView={fromQuery ? viewParam : "cards"}
+        fromQuery={fromQuery}
+      />
     </div>
   );
 }
@@ -149,19 +159,49 @@ async function resolve(
   switch (type) {
     case "source": {
       const source = await getSource(itemId);
-      return source ? sourceItem(source) : null;
+      if (!source) return null;
+      return {
+        ...sourceItem(source),
+        previewSrc: itemPreviewSrc(
+          "source",
+          source.id,
+          source.markdown
+            ? `${source.ingest_status}-${hashBody(source.markdown)}`
+            : null,
+        ),
+      };
     }
     case "note": {
       const note = noteById(itemId);
-      return note ? noteItem(note) : null;
+      if (!note) return null;
+      return {
+        ...noteItem(note),
+        previewSrc: itemPreviewSrc("note", note.id, note.body_hash),
+      };
     }
     case "extract": {
       const extract = extractById(itemId);
-      return extract ? extractItem(extract) : null;
+      if (!extract) return null;
+      return {
+        ...extractItem(extract),
+        previewSrc: itemPreviewSrc(
+          "extract",
+          extract.id,
+          hashBody(extract.body_md),
+        ),
+      };
     }
     case "activity": {
       const activity = activityById(itemId);
-      return activity ? activityItem(activity) : null;
+      if (!activity) return null;
+      return {
+        ...activityItem(activity),
+        previewSrc: itemPreviewSrc(
+          "activity",
+          activity.id,
+          activity.source_body_hash,
+        ),
+      };
     }
     default:
       return null;
