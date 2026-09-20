@@ -148,19 +148,18 @@ async function handleUpload(request: Request): Promise<Response> {
     String(form.get("title") ?? "").trim() ||
     file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ");
 
-  let stored;
-  try {
-    stored = await persistPdf(file.name, bytes);
-  } catch (error) {
-    console.error("Could not archive the uploaded PDF", error);
-    return fail("Could not store that PDF.");
+  // Archiving the original is best-effort: `persistPdf` never throws, and a
+  // source with no `storage_key` still ingests from the bytes read above.
+  const stored = await persistPdf(file.name, bytes);
+  if (stored.unarchived) {
+    console.warn(`Keeping ${file.name} without its original. ${stored.unarchived}`);
   }
 
   const source = await createSource({
     kind: "pdf",
     title,
     origin_uri: stored.origin_uri,
-    storage_key: stored.storage_key,
+    storage_key: stored.storage_key ?? undefined,
   });
 
   await linkToNotebook(notebookId, "source", source.id);
