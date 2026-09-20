@@ -1,12 +1,88 @@
-Copy this prompt to the agent with TCP access:
+Copy this prompt to an agent running from a location with TCP access to the Tiger Cloud database:
 
 ---
 
-You are continuing Tiger Cloud integration work in the `RecursiveFunctions/HelloWord` repository on branch `feat/tiger-data-integration`.
+You are completing a blocked PostgreSQL schema migration for the `RecursiveFunctions/HelloWord` repository.
 
 ## Objective
 
-Validate the application against the real Tiger Cloud PostgreSQL service, initialize it only if safe, run integration checks, and fix Tiger-specific defects discovered during testing.
+Apply and verify migration `db/migrations/201_extract_backed_activities.sql` against the production Tiger Cloud PostgreSQL database, then report evidence of the resulting schema state.
+
+Application code already pushed to `feat/manual-extracts-clozes` requires the new `extract_id` columns. Do not deploy that code to production before the migration is verified.
+
+## Current repository state
+
+- Feature branch: `feat/manual-extracts-clozes`
+- Required commit: `cc0cc386e6dbba0ae1c4690ec86a285dfe7dd12f`
+- Production branch: `main`
+- Last observed `main`: `ffd769d7dea59941c63ed26220ea9c24ad6a15e3`
+- Vercel production tracks `main`; the feature-branch push does not deploy production.
+- Required migration: `db/migrations/201_extract_backed_activities.sql`
+
+The originating machine resolved the Tiger Cloud hostname, but TCP connections to both resolved IPv4 addresses timed out on the configured nonstandard PostgreSQL port. Authentication and SQL execution were never reached. Run this handoff from an allowlisted network/location with Tiger Cloud access.
+
+## Migration-specific execution plan
+
+1. Read `AGENTS.md`.
+2. Fetch `origin` and check out `feat/manual-extracts-clozes` at or after `cc0cc38`.
+3. Run `git status --short --branch`; preserve all unrelated worktree files.
+4. Confirm `db/migrations/201_extract_backed_activities.sql` exists.
+5. Load the authorized production `DATABASE_URL` without printing it.
+6. Verify DNS, TCP, TLS, authentication, and a read-only SQL query separately.
+7. If TCP times out, stop and report that this execution location is not allowlisted or cannot route to Tiger Cloud. Do not call that a migration failure.
+8. Inspect whether migration 201 is absent, partial, or complete.
+9. If incomplete, apply only migration 201 in a fail-fast transaction.
+10. Independently verify every required schema and integrity condition below.
+
+## Pre- and post-migration checks
+
+Verify:
+
+- `activity.extract_id` and `review_event.extract_id` exist as nullable UUID columns.
+- `activity.note_id`, `activity.source_body_hash`, and `review_event.note_id` are nullable.
+- Both `extract_id` foreign keys reference `extract(id)` with `ON DELETE CASCADE`.
+- `activity_exactly_one_parent` and `review_event_exactly_one_parent` exist, are validated, and enforce `num_nonnulls(note_id, extract_id) = 1`.
+- `activity_v` exists and calculates `stale` correctly for note-backed activities.
+- `activity_manual_cloze_identity` exists as the intended partial unique index for extract-backed `fill_blank` activities.
+- The count of `activity` rows with both or neither parent is zero.
+- The count of `review_event` rows with both or neither parent is zero.
+
+Report only schema metadata and violation counts. Never print user row contents.
+
+## Applying migration 201
+
+- Do not run `db/schema.sql`, `db/seed.sql`, or any unrelated migration.
+- Use `psql` with `ON_ERROR_STOP=1` inside a transaction, or the repository's `pg` dependency with explicit `BEGIN`, `COMMIT`, and `ROLLBACK`.
+- If the schema is partially applied and migration 201 fails, inspect the exact schema state before taking further action. Do not improvise destructive repairs.
+- Do not create test clozes or review events in production solely for validation.
+- Do not merge or deploy `main` unless explicitly authorized.
+
+The safe release order is:
+
+1. Verify migration 201 in production.
+2. Merge the feature branch into `main` through the normal review process.
+3. Confirm Vercel deploys the resulting `main` commit.
+4. Verify production health and affected reader/review endpoints.
+
+## Required handoff report
+
+Return:
+
+1. Git branch, exact commit, and worktree status.
+2. Connection result by layer: DNS, TCP, TLS, authentication, SQL.
+3. Whether migration 201 was absent, partial, or already complete.
+4. Exact migration operation performed.
+5. Transaction commit or rollback result.
+6. Verification results for both columns, nullability, constraints, foreign keys, view, index, and both integrity violation counts.
+7. Remaining blockers.
+8. Confirmation that no credentials or user data were exposed.
+9. Confirmation that no schema bootstrap, seed, or unrelated migration was run.
+
+Do not report migration success unless every required post-migration verification passes.
+
+## Previous broader Tiger integration instructions
+
+The remaining sections are historical context only. Where they conflict with the migration-specific plan above, follow the migration-specific plan. Do not initialize, seed, or broadly test production for this task.
 
 ## Safety requirements
 
