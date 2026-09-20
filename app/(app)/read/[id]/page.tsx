@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/empty";
 import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
 import { parseBlocks } from "@/lib/editor/blocks";
-import { extractNotes, notes } from "@/lib/seed";
+import { extractNotes } from "@/lib/seed";
 import { listSourceExtracts } from "@/lib/store/extracts";
-import { getNote } from "@/lib/store/notes";
+import { getNote, listNotes } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
@@ -65,7 +65,8 @@ function SourceHeader({
 }
 
 /** Placeholder rail while PDFs use the iframe viewer instead of SourcePane. */
-function PdfNoteRail() {
+async function PdfNoteRail() {
+	const notes = await listNotes();
 	return (
 		<aside className="max-h-[min(40svh,24rem)] w-full shrink-0 overflow-auto border-t bg-sidebar px-4 py-5 sm:px-5 sm:py-6 lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l xl:w-[28rem]">
 			<h2 className="font-heading text-lg">Note editor</h2>

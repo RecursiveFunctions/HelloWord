@@ -4,9 +4,8 @@ A spaced repetition progressive web app built for SteelHacks XIII.
 
 > "HelloWord" is a placeholder name.
 
-**Status: wave 0 (contracts + seed + nav shell).** Four workstreams can branch
-from this commit and build in parallel. The UI renders committed fixtures; a
-Tiger Cloud database is not required until someone wires `lib/db.ts`.
+The app supports two runtime backends: committed in-memory fixtures for local
+development, and Tiger Cloud for persistent data and review diagnostics.
 
 ## Pitch
 
@@ -33,10 +32,16 @@ Apply the real schema later:
 
 ```bash
 psql "$DATABASE_URL" -f db/schema.sql
+psql "$DATABASE_URL" -f db/migrations/100_feeds.sql
+psql "$DATABASE_URL" -f db/migrations/200_extract_proposal_metadata.sql
+psql "$DATABASE_URL" -f db/migrations/400_review_clock.sql
 psql "$DATABASE_URL" -f db/seed.sql
+npm run smoke
 ```
 
 `npm run db:generate-seed` rewrites `db/seed.sql` from `lib/seed`.
+Run the generated seed only against an empty service. See [db/README.md](db/README.md)
+for the full bootstrap and verification notes.
 
 ## Sponsor credentials
 
@@ -53,7 +58,7 @@ That makes a real Nemotron completion, a Snowflake Cortex REST call, and a Tiger
 |---|---|---|
 | Nemotron | [build.nvidia.com](https://build.nvidia.com) → API key | `POST /v1/chat/completions` returns 200. `GET /v1/models` can be 200 while completions are 403. |
 | Snowflake API | [signup.snowflake.com/?trial=student](https://signup.snowflake.com/?trial=student) (120 days). PAT + network-policy exception | `POST /api/v2/cortex/v1/chat/completions` with `X-Snowflake-Authorization-Token-Type: PROGRAMMATIC_ACCESS_TOKEN`. Not the legacy `inference:complete` path. |
-| Tiger Data | Tiger Console → **Free Plan**, not the 30-day trial, `us-east-1` | `DATABASE_URL` connects, `timescaledb` + vector extensions exist, then `psql "$DATABASE_URL" -f db/schema.sql` and `-f db/seed.sql`. |
+| Tiger Data | Tiger Console → **Free Plan**, not the 30-day trial, `us-east-1` | `DATABASE_URL` connects; the smoke verifies extensions, `review_event` hypertable, `review_daily` aggregate policy, migration, and DiskANN indexes. |
 
 Keep `AI_MOCK=1` until C’s client is live. Wave 1 UI work does not wait on these calls.
 

@@ -1,7 +1,7 @@
-import { notebookSparkline } from "@/lib/seed";
+import { notebookTrends } from "@/lib/diagnostics/notebook";
 import { dueCounts } from "@/lib/fsrs/queue";
-import { notebookPreviewSrc } from "@/lib/store/previews";
 import { listNotebooks } from "@/lib/store/notebooks";
+import { notebookPreviewSrc } from "@/lib/store/previews";
 import { resolveNotebookColor } from "@/lib/themes";
 import { NotebookBrowser } from "./notebook-browser";
 import { isWorkspaceView } from "./workspace-view";
@@ -18,6 +18,7 @@ export default async function NotebooksPage({
     listNotebooks(),
     dueCounts(),
   ]);
+  const trends = await notebookTrends(notebooks.map((notebook) => notebook.id));
 
   const items = await Promise.all(
     notebooks.map(async (notebook) => {
@@ -28,11 +29,7 @@ export default async function NotebooksPage({
         description: notebook.description,
         color,
         due: byNotebook[notebook.id] ?? 0,
-        spark: notebookSparkline({
-          ...notebook,
-          description: notebook.description ?? "",
-          color,
-        }),
+        spark: trends[notebook.id] ?? [],
         coverSrc: await notebookPreviewSrc(notebook.id),
       };
     }),

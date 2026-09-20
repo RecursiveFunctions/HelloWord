@@ -1,19 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Sparkline } from "@/components/sparkline";
+import { diagnosticsForNotebook } from "@/lib/diagnostics/notebook";
 import { hashBody } from "@/lib/hash";
-import {
-  conceptExtracts,
-  conceptNotes,
-  concepts,
-  diagnosticsForNotebook,
-} from "@/lib/seed";
-import { itemPreviewSrc } from "@/lib/store/previews";
 import { getExtract } from "@/lib/store/extracts";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
 import { getNote } from "@/lib/store/notes";
+import { itemPreviewSrc } from "@/lib/store/previews";
 import { getActivity } from "@/lib/store/review";
-import { resolveNotebookColor } from "@/lib/themes";
 import { getSource } from "@/lib/store/sources";
+import { resolveNotebookColor } from "@/lib/themes";
 import {
   activityItem,
   extractItem,
@@ -40,10 +36,12 @@ export default async function NotebookDetailPage({
 
   const membership = await listNotebookItems(id);
   const items = (
-    await Promise.all(membership.map((item) => resolve(item.item_type, item.item_id)))
+    await Promise.all(
+      membership.map((item) => resolve(item.item_type, item.item_id)),
+    )
   ).filter((item) => item !== null);
 
-  const diag = scopeToNotebook(diagnosticsForNotebook(id), membership);
+  const diag = await diagnosticsForNotebook(id);
   const hasDiagnostics =
     diag.struggling.length + diag.known.length + diag.untouched.length > 0;
   const color = resolveNotebookColor(notebook.color);
@@ -79,14 +77,30 @@ export default async function NotebookDetailPage({
         </p>
       ) : (
         <NotebookDiagnostics
-          struggling={diag.struggling}
-          known={diag.known}
-          untouched={diag.untouched}
+          struggling={diag.struggling.map((row) => ({
+            concept: row.concept,
+            why: row.why ?? "Needs more review history.",
+          }))}
+          known={diag.known.map((row) => row.concept)}
+          untouched={diag.untouched.map((row) => row.concept)}
         />
       )}
 
       {hasDiagnostics ? (
-        <p className="text-sm text-muted-foreground">{diag.next_action}</p>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card px-4 py-3">
+          <div>
+            <p className="text-sm">{diag.nextAction}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              90-day trend from{" "}
+              {diag.source === "review_daily"
+                ? "Tiger review_daily"
+                : "fixture rollup"}
+            </p>
+          </div>
+          {diag.trend.some((value) => value > 0) ? (
+            <Sparkline values={diag.trend} color={color} className="h-8 w-32" />
+          ) : null}
+        </div>
       ) : null}
 
       <NotebookContents
@@ -100,57 +114,8 @@ export default async function NotebookDetailPage({
 }
 
 /**
- * Diagnostics are a pure aggregate over a notebook's own contents, so an empty
- * notebook must report nothing. `diagnosticsForNotebook` currently rolls up
- * every concept globally, which would otherwise show a notebook created a
- * minute ago as already knowing eight of them. Narrow the three buckets to the
- * concepts actually reachable from this notebook's notes and extracts.
- *
- * Workstream D owns the real per-notebook rollup against `review_daily`; this
- * is the screen refusing to overstate what it knows until that lands.
- */
-function scopeToNotebook(
-  diagnostics: ReturnType<typeof diagnosticsForNotebook>,
-  membership: { item_type: string; item_id: string }[],
-) {
-  const noteIds = new Set(
-    membership.filter((i) => i.item_type === "note").map((i) => i.item_id),
-  );
-  const extractIds = new Set(
-    membership.filter((i) => i.item_type === "extract").map((i) => i.item_id),
-  );
-
-  const conceptIds = new Set([
-    ...conceptNotes
-      .filter((link) => noteIds.has(link.note_id))
-      .map((link) => link.concept_id),
-    ...conceptExtracts
-      .filter((link) => extractIds.has(link.extract_id))
-      .map((link) => link.concept_id),
-  ]);
-
-  const labels = new Set(
-    concepts.filter((c) => conceptIds.has(c.id)).map((c) => c.label),
-  );
-
-  const struggling = diagnostics.struggling.filter((row) =>
-    labels.has(row.concept),
-  );
-
-  return {
-    struggling,
-    known: diagnostics.known.filter((label) => labels.has(label)),
-    untouched: diagnostics.untouched.filter((label) => labels.has(label)),
-    next_action: struggling[0]
-      ? `Review ${struggling[0].concept} next — ${struggling[0].why}`
-      : diagnostics.next_action,
-  };
-}
-
-/**
  * `notebook_item` is polymorphic, so membership rows resolve against four
- * different tables. Sources are A's and live in the store; the rest still come
- * from the seed until B, C, and D land theirs.
+ * different store modules.
  */
 async function resolve(
   type: string,
