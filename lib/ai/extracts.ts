@@ -111,7 +111,9 @@ export async function proposeExtracts(source: AiSource): Promise<ProposeResult> 
     system: EXTRACT_SYSTEM,
     // reasoning_effort low: this is selection, not composition.
     reasoningEffort: "low",
-    maxTokens: 2_000,
+    // Nemotron may spend part of this budget reasoning before emitting JSON.
+    // Keep enough room for 8 verbatim passages and their short annotations.
+    maxTokens: 4_000,
     temperature: 0.2,
     user: `Title: ${source.title}
 ${truncated ? "Excerpt (the document continues past this point):" : "Full text:"}

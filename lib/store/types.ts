@@ -1,3 +1,5 @@
+import type { SelectorBundle } from "@/lib/contracts/anchor";
+
 /**
  * Row shapes for the tables the store reads: `source`, `notebook`,
  * `notebook_item`, the additive `feed` table from migration 100, and the
@@ -27,6 +29,21 @@ export type SourceRow = {
   ingest_method: IngestMethod | null;
   ingest_error: string | null;
   word_count: number | null;
+  created_at: string;
+};
+
+export type ExtractRow = {
+  id: string;
+  source_id: string | null;
+  note_id: string | null;
+  body_md: string;
+  priority: number;
+  selector: SelectorBundle;
+  anchor_status: "anchored" | "orphaned" | "detached";
+  suggested_by: "human" | "nemotron";
+  accepted: boolean;
+  suggestion_reason: string | null;
+  suggestion_concepts: string[];
   created_at: string;
 };
 

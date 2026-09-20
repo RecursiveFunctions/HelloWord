@@ -2,11 +2,10 @@ import { env } from "../env";
 import { AiProviderError, AiUnconfiguredError } from "./errors";
 import { deterministicVector } from "./mock";
 import {
-  MAX_RETRY_AFTER_MS,
   describeError,
   embeddingProvider,
-  isFailoverWorthy,
-  retryAfterMs,
+  isTransientProviderError,
+  retryDelayMs,
   sleep,
 } from "./provider";
 
@@ -63,9 +62,8 @@ async function embedBatch(texts: string[], inputType: InputType): Promise<number
         .sort((a, b) => a.index - b.index)
         .map((item) => toDims(item.embedding));
     } catch (error) {
-      if (attempt < ATTEMPTS && isFailoverWorthy(error)) {
-        const wait = retryAfterMs(error);
-        await sleep(Math.min(wait ?? 500, MAX_RETRY_AFTER_MS));
+      if (attempt < ATTEMPTS && isTransientProviderError(error)) {
+        await sleep(retryDelayMs(error, attempt - 1));
         failures.push(`${provider.label}: ${describeError(error)}`);
         continue;
       }
