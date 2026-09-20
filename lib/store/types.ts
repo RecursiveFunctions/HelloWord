@@ -33,6 +33,8 @@ export type SourceRow = {
   distill_status: DistillStatus;
   distill_error: string | null;
   created_at: string;
+  /** Set while the row is in Recently deleted; null or absent when live. */
+  deleted_at?: string | null;
 };
 
 export type DistillStatus = "none" | "extracting" | "proposed" | "failed";
@@ -72,6 +74,8 @@ export type NoteRow = {
   body_hash: string;
   origin: "human" | "ai_drafted" | "ai_edited";
   created_at: string;
+  /** Set while the row is in Recently deleted; null or absent when live. */
+  deleted_at?: string | null;
   updated_at: string;
 };
 
@@ -113,6 +117,8 @@ export type ExtractRow = {
   queue_reps: number;
   queue_last_seen: string | null;
   created_at: string;
+  /** Set while the row is in Recently deleted; null or absent when live. */
+  deleted_at?: string | null;
 };
 
 export type QueueStatus = "queued" | "distilled" | "dismissed";
@@ -128,6 +134,8 @@ export type NotebookRow = {
    */
   cover_storage_key: string | null;
   created_at: string;
+  /** Set while the row is in Recently deleted; null or absent when live. */
+  deleted_at?: string | null;
 };
 
 export type NotebookItemType = "source" | "note" | "extract" | "activity";
@@ -157,6 +165,8 @@ export type ActivityRow = {
   source_body_hash: string | null;
   variant_of: string | null;
   created_at: string;
+  /** Set while the row is in Recently deleted; null or absent when live. */
+  deleted_at?: string | null;
 };
 
 /**
@@ -226,4 +236,9 @@ export function isoString(value: unknown): string {
 export function isoStringOrNull(value: unknown): string | null {
   if (value == null) return null;
   return isoString(value);
+}
+
+/** Memory-backend twin of `deleted_at is null`. */
+export function isLive(row: { deleted_at?: string | null }): boolean {
+  return !row.deleted_at;
 }

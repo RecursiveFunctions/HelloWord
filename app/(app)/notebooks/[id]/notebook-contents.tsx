@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { removeFromNotebookWithUndo } from "@/lib/client/trash";
 import { cn } from "@/lib/utils";
 import type { LibraryItem, LibraryItemType } from "../../library/items";
 import { useFileDrop, useNotebookUpload } from "../use-notebook-upload";
@@ -36,12 +37,14 @@ const SECTIONS: { type: LibraryItemType; heading: string; empty: string }[] = [
 
 export function NotebookContents({
   notebookId,
+  notebookName,
   items: libraryRows,
   libraryItems,
   initialView = "cards",
   fromQuery = false,
 }: {
   notebookId: string;
+  notebookName: string;
   items: LibraryItem[];
   /** Library items not yet in this notebook, for the "Add from library" picker. */
   libraryItems: LibraryItem[];
@@ -74,17 +77,13 @@ export function NotebookContents({
   async function remove(item: LibraryItem) {
     const key = `${item.type}:${item.id}`;
     setRemoving(key);
-
-    const params = new URLSearchParams({
-      item_type: item.type,
-      item_id: item.id,
-    });
-    await fetch(`/api/notebooks/${notebookId}/items?${params}`, {
-      method: "DELETE",
-    });
-
+    await removeFromNotebookWithUndo(
+      { id: notebookId, name: notebookName },
+      item,
+      item.title, () =>
+      router.refresh(),
+    );
     setRemoving(null);
-    router.refresh();
   }
 
   return (

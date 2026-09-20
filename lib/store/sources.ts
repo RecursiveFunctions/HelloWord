@@ -1,6 +1,7 @@
 import { dbConfigured, query } from "@/lib/db";
 import { memory } from "./memory";
 import {
+  isLive,
   isoString,
   type DistillStatus,
   type IngestMethod,
@@ -36,34 +37,40 @@ const newestFirst = (a: SourceRow, b: SourceRow) =>
 export async function listSources(): Promise<SourceRow[]> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from source order by created_at desc`,
+      `select ${COLUMNS} from source
+       where deleted_at is null order by created_at desc`,
     );
     return rows.map(hydrate);
   }
-  return [...memory().sources].sort(newestFirst);
+  return memory().sources.filter(isLive).sort(newestFirst);
 }
 
 export async function getSource(id: string): Promise<SourceRow | null> {
   if (dbConfigured()) {
-    const rows = await query(`select ${COLUMNS} from source where id = $1`, [
-      id,
-    ]);
+    const rows = await query(`select ${COLUMNS} from source where id = $1 and deleted_at is null`,
+      [id],
+    );
     return rows[0] ? hydrate(rows[0]) : null;
   }
-  return memory().sources.find((source) => source.id === id) ?? null;
+  return (
+    memory().sources.find((source) => source.id === id && isLive(source)) ??
+    null
+  );
 }
 
 export async function findSourceByUri(uri: string): Promise<SourceRow | null> {
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from source where origin_uri = $1
+      `select ${COLUMNS} from source
+       where origin_uri = $1 and deleted_at is null
        order by created_at desc limit 1`,
       [uri],
     );
     return rows[0] ? hydrate(rows[0]) : null;
   }
   return (
-    [...memory().sources]
+    memory()
+      .sources.filter(isLive)
       .sort(newestFirst)
       .find((source) => source.origin_uri === uri) ?? null
   );

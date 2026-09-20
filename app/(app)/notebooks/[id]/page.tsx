@@ -114,6 +114,7 @@ export default async function NotebookDetailPage({
 
       <NotebookContents
         notebookId={id}
+        notebookName={notebook.name}
         items={items}
         libraryItems={libraryItems}
         initialView={fromQuery ? viewParam : "cards"}

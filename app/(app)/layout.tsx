@@ -1,4 +1,5 @@
 import { AppTopbar } from "@/components/app-topbar";
+import { Toaster } from "@/components/ui/toast";
 import { dueCounts } from "@/lib/fsrs/queue";
 import { readingDueCount } from "@/lib/reading/queue";
 
@@ -16,6 +17,7 @@ export default async function AppLayout({
   ]);
 
   return (
+    <Toaster>
     <div className="flex min-h-svh flex-col">
       <AppTopbar dueCount={dueCount} readCount={readCount} />
       {/* Ordinary pages grow with content and scroll on the window. Full-bleed
@@ -27,5 +29,6 @@ export default async function AppLayout({
         </div>
       </div>
     </div>
+    </Toaster>
   );
 }

@@ -2,7 +2,7 @@ import { dbConfigured, query } from "@/lib/db";
 import { normalizeMarkdown } from "@/lib/contracts/markdown";
 import { hashBody } from "@/lib/hash";
 import { memory } from "./memory";
-import { isoString, type ExtractNoteRow, type NoteRow } from "./types";
+import { isLive, isoString, type ExtractNoteRow, type NoteRow } from "./types";
 
 const COLUMNS = `id, title, body_md, body_hash, origin, created_at, updated_at`;
 
@@ -20,17 +20,23 @@ function hydrate(row: Record<string, unknown>): NoteRow {
 
 export async function listNotes(): Promise<NoteRow[]> {
   if (dbConfigured()) {
-    return (await query(`select ${COLUMNS} from note order by updated_at desc`)).map(hydrate);
+    return (
+      await query(
+        `select ${COLUMNS} from note where deleted_at is null order by updated_at desc`,
+      )
+    ).map(hydrate);
   }
-  return memory().notes;
+  return memory().notes.filter(isLive);
 }
 
 export async function getNote(id: string): Promise<NoteRow | null> {
   if (dbConfigured()) {
-    const rows = await query(`select ${COLUMNS} from note where id = $1`, [id]);
+    const rows = await query(`select ${COLUMNS} from note where id = $1 and deleted_at is null`,
+      [id],
+    );
     return rows[0] ? hydrate(rows[0]) : null;
   }
-  return memory().notes.find((note) => note.id === id) ?? null;
+  return memory().notes.find((note) => note.id === id && isLive(note)) ?? null;
 }
 
 export async function updateNote(
@@ -108,13 +114,14 @@ export async function listNotesByIds(ids: string[]): Promise<NoteRow[]> {
   if (ids.length === 0) return [];
   if (dbConfigured()) {
     const rows = await query(
-      `select ${COLUMNS} from note where id = any($1::uuid[]) order by updated_at desc`,
+      `select ${COLUMNS} from note where id = any($1::uuid[]) and deleted_at is null
+       order by updated_at desc`,
       [ids],
     );
     return rows.map(hydrate);
   }
   const wanted = new Set(ids);
-  return memory().notes.filter((note) => wanted.has(note.id));
+  return memory().notes.filter((note) => wanted.has(note.id) && isLive(note));
 }
 
 /** Record that an extract was distilled into a note. Idempotent. */
