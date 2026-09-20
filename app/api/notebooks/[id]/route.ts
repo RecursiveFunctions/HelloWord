@@ -12,7 +12,10 @@ const PatchNotebookBody = z.object({
   description: z.string().max(500).nullable().optional(),
   color: z
     .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "Use a six-digit hex colour, e.g. #1d4ed8.")
+    .regex(
+      /^(#[0-9a-fA-F]{6}|oklch\([^)]+\))$/,
+      "Use a six-digit hex colour or an oklch() swatch.",
+    )
     .nullable()
     .optional(),
 });

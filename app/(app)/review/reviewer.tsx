@@ -22,6 +22,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { ClockPresets } from "@/components/clock-presets";
+import { resolveNotebookColor } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import type { ClientCard } from "@/lib/fsrs/queue";
 import type { ActivityPayload, Rating } from "@/lib/contracts/activity";
@@ -256,7 +257,9 @@ export function Reviewer({
               key={notebook.id}
               active={isOn(notebook.id)}
               count={counts.byNotebook[notebook.id] ?? 0}
-              color={notebook.color}
+              color={
+                notebook.color ? resolveNotebookColor(notebook.color) : null
+              }
               onClick={() => toggle(notebook.id)}
             >
               {notebook.name}

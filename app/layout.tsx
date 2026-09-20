@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "HelloWord",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   icons: {
     icon: "/icons/192",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0a09",
+  themeColor: "#fcfcfd",
   // An installed PWA should not bounce the whole page when a pane scrolls.
   viewportFit: "cover",
 };
@@ -47,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="white"
       suppressHydrationWarning
       className={`${sans.variable} ${mono.variable} ${serif.variable} h-full antialiased`}
     >
