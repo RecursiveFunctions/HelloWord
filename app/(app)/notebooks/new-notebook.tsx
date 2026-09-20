@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -107,10 +106,6 @@ export function NewNotebook({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New notebook</DialogTitle>
-            <DialogDescription>
-              Start a notebook for one topic. You can add sources to it
-              anytime.
-            </DialogDescription>
           </DialogHeader>
 
           <form
