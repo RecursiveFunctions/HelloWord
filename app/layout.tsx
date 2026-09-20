@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Script from "next/script";
-import { ColorWheel, themeInitScript } from "@/components/color-wheel";
+import { themeInitScript } from "@/components/color-wheel";
 import { OfflineBanner, RegisterServiceWorker } from "@/components/pwa";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -57,7 +57,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
         <OfflineBanner />
         <TooltipProvider>{children}</TooltipProvider>
-        <ColorWheel />
         <RegisterServiceWorker />
       </body>
     </html>
