@@ -26,6 +26,10 @@ flowchart LR
   end
 ```
 
+### Amendment: approval in the path, not authorship
+
+The reading queue (`/read`) moves the human from author to approver. After ingest the model proposes extracts on its own, and for each passage the reader reaches it drafts a note and cards. None of that is real until the reader approves it: proposals are `extract` rows with `accepted = false`, and drafted notes and cards live in `distill_draft`, never in `note` or `activity`. `approveDraft` in `lib/distill/pipeline.ts` is the only door, and the draft is editable on the way through it. So the rule below still holds in the form that matters - nothing reaches review without a human pass - but the pass can now be a yes rather than a rewrite. The reader's manual Suggest, draft, and Generate path is unchanged.
+
 Three consequences for the build:
 
 - AI never generates an activity directly from a source or extract. A deliberate manual cloze can create or reuse an extract and derive directly from it.

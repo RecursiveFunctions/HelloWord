@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { CreateSourceBody } from "@/lib/api";
+import { distillExtracts } from "@/lib/distill/pipeline";
 import { ingestSource } from "@/lib/ingest";
 import { titleFromUrl } from "@/lib/ingest/text";
 import { persistPdf } from "@/lib/storage/pdf";
@@ -30,6 +31,19 @@ async function notebookTarget(raw: unknown): Promise<string | null | Response> {
 
 /** Ingest can take the better part of a minute on a scanned PDF. */
 export const maxDuration = 60;
+
+/**
+ * Ingest, then have the model propose extracts, so a new source shows up in the
+ * reading queue without anyone pressing Suggest.
+ *
+ * Both share this route's `maxDuration`. A slow ingest can leave the model call
+ * no time to finish; the source is then left `extracting` or `none`, and
+ * `POST /api/distill/source/:id` picks it up when the reader next opens it.
+ */
+async function ingestThenDistill(id: string, bytes?: Uint8Array): Promise<void> {
+  const source = await ingestSource(id, bytes);
+  if (source?.ingest_status === "ready") await distillExtracts(source.id);
+}
 
 export async function GET(): Promise<Response> {
   return ok({ sources: await listSources() });
@@ -94,7 +108,7 @@ async function handleJson(request: Request): Promise<Response> {
 
   const source = await createSource({ kind, title, origin_uri, storage_key });
   await linkToNotebook(notebookId, "source", source.id);
-  after(() => ingestSource(source.id));
+  after(() => ingestThenDistill(source.id));
   return ok({ source }, 202);
 }
 
@@ -150,7 +164,7 @@ async function handleUpload(request: Request): Promise<Response> {
   });
 
   await linkToNotebook(notebookId, "source", source.id);
-  after(() => ingestSource(source.id, bytes));
+  after(() => ingestThenDistill(source.id, bytes));
   return ok({ source }, 202);
 }
 
@@ -186,7 +200,7 @@ async function linkToNotebook(
 
 function resume(existing: SourceRow): Response {
   if (existing.ingest_status === "failed") {
-    after(() => ingestSource(existing.id));
+    after(() => ingestThenDistill(existing.id));
     return ok({ source: { ...existing, ingest_status: "pending" }, retried: true }, 202);
   }
   return ok({ source: existing, existing: true }, 200);

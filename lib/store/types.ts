@@ -29,8 +29,41 @@ export type SourceRow = {
   ingest_method: IngestMethod | null;
   ingest_error: string | null;
   word_count: number | null;
+  /** Whether the model has proposed extracts for this source yet. */
+  distill_status: DistillStatus;
+  distill_error: string | null;
   created_at: string;
 };
+
+export type DistillStatus = "none" | "extracting" | "proposed" | "failed";
+
+/**
+ * `drafting_*` are claims: a route handler owns the row while it waits on the
+ * model. `failed` keeps whatever stage had already finished, so a retry resumes
+ * rather than restarts.
+ */
+export type DraftStatus =
+  | "pending"
+  | "drafting_note"
+  | "note_ready"
+  | "drafting_cards"
+  | "ready"
+  | "failed"
+  | "approved";
+
+/** An AI-drafted note and cards for one extract, awaiting a human. */
+export type DistillDraftRow = {
+  extract_id: string;
+  status: DraftStatus;
+  note_title: string | null;
+  note_body_md: string | null;
+  note_concepts: string[];
+  activities: ActivityPayload[];
+  error: string | null;
+  updated_at: string;
+};
+
+export type ExtractNoteRow = { extract_id: string; note_id: string };
 
 export type NoteRow = {
   id: string;
@@ -69,8 +102,20 @@ export type ExtractRow = {
   accepted: boolean;
   suggestion_reason: string | null;
   suggestion_concepts: string[];
+  /**
+   * Where the extract sits in the incremental reading queue. `queued` rows come
+   * back when `queue_due` passes; `distilled` and `dismissed` never do.
+   */
+  queue_status: QueueStatus;
+  /** Wall-clock, like `schedule.due`. */
+  queue_due: string;
+  queue_interval_days: number;
+  queue_reps: number;
+  queue_last_seen: string | null;
   created_at: string;
 };
+
+export type QueueStatus = "queued" | "distilled" | "dismissed";
 
 export type NotebookRow = {
   id: string;

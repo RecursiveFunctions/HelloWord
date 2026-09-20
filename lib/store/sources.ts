@@ -2,13 +2,15 @@ import { dbConfigured, query } from "@/lib/db";
 import { memory } from "./memory";
 import {
   isoString,
+  type DistillStatus,
   type IngestMethod,
   type IngestStatus,
   type SourceRow,
 } from "./types";
 
 const COLUMNS = `id, kind, title, origin_uri, storage_key, markdown,
-                 ingest_status, ingest_method, ingest_error, word_count, created_at`;
+                 ingest_status, ingest_method, ingest_error, word_count,
+                 distill_status, distill_error, created_at`;
 
 function hydrate(row: Record<string, unknown>): SourceRow {
   return {
@@ -22,6 +24,8 @@ function hydrate(row: Record<string, unknown>): SourceRow {
     ingest_method: (row.ingest_method as IngestMethod | null) ?? null,
     ingest_error: (row.ingest_error as string | null) ?? null,
     word_count: (row.word_count as number | null) ?? null,
+    distill_status: (row.distill_status as DistillStatus | undefined) ?? "none",
+    distill_error: (row.distill_error as string | null) ?? null,
     created_at: isoString(row.created_at),
   };
 }
@@ -96,6 +100,8 @@ export async function createSource(
     ingest_method: null,
     ingest_error: null,
     word_count: null,
+    distill_status: "none",
+    distill_error: null,
     created_at: new Date().toISOString(),
   };
   memory().sources.unshift(row);
@@ -112,6 +118,8 @@ export type SourcePatch = Partial<
     | "ingest_method"
     | "ingest_error"
     | "word_count"
+    | "distill_status"
+    | "distill_error"
   >
 >;
 

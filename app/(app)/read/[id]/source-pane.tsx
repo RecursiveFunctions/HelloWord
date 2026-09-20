@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, type MouseEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   MD_OFFSET_ATTR,
   parseBlocks,
@@ -15,6 +15,7 @@ import {
   rangesForOffsets,
   supportsCustomHighlight,
 } from "@/lib/anchor/dom";
+import { condense } from "@/lib/reader/condense";
 import "./reader.css";
 
 /** Minimal shape the pane needs; the full extract row carries much more. */
@@ -29,6 +30,11 @@ type SourcePaneProps = {
   markdown: string;
   extracts: readonly PaintedExtract[];
   proposals?: readonly PaintedExtract[];
+  /**
+   * Show only the blocks that carry an extract or proposal, folding the rest
+   * into "N words hidden" gaps. A view over the same blocks: no offset moves.
+   */
+  condensed?: boolean;
   activeExtractId?: string | null;
   onActivateExtract?: (id: string | null) => void;
   onSelectionChange?: (selection: { start: number; end: number } | null) => void;
@@ -123,6 +129,7 @@ export function SourcePane({
   markdown,
   extracts,
   proposals = [],
+  condensed = false,
   activeExtractId,
   onActivateExtract,
   onSelectionChange,
@@ -130,6 +137,14 @@ export function SourcePane({
 }: SourcePaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blocks = useMemo(() => parseBlocks(markdown), [markdown]);
+  const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
+  const items = useMemo(
+    () =>
+      condensed
+        ? condense(blocks, [...extracts, ...proposals], expanded)
+        : blocks.map((block) => ({ kind: "block" as const, block })),
+    [blocks, condensed, extracts, proposals, expanded],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -159,7 +174,8 @@ export function SourcePane({
       clearHighlight("extract-active");
       clearHighlight("extract-proposal");
     };
-  }, [blocks, extracts, proposals, activeExtractId]);
+    // `items`, not `blocks`: opening a gap adds spans that need painting.
+  }, [items, extracts, proposals, activeExtractId]);
 
   // Painted highlights are not elements, so hit-testing uses the markdown
   // offset under the pointer, not the start of the clicked block.
@@ -199,9 +215,23 @@ export function SourcePane({
       onTouchEnd={captureSelection}
       onContextMenu={handleContextMenu}
     >
-      {blocks.map((block) => (
-        <BlockView key={`${block.kind}-${block.start}`} block={block} />
-      ))}
+      {items.map((item) =>
+        item.kind === "block" ? (
+          <BlockView key={`${item.block.kind}-${item.block.start}`} block={item.block} />
+        ) : (
+          <button
+            key={`gap-${item.start}`}
+            type="button"
+            className="my-3 flex w-full items-center gap-3 text-xs text-muted-foreground select-none before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border hover:text-foreground"
+            onClick={(event) => {
+              event.stopPropagation();
+              setExpanded((current) => new Set(current).add(item.start));
+            }}
+          >
+            {item.words.toLocaleString()} word{item.words === 1 ? "" : "s"} hidden
+          </button>
+        ),
+      )}
     </div>
   );
 }

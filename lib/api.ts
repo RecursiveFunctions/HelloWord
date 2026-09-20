@@ -36,6 +36,12 @@ export const ApiPath = {
   extractReanchor: (id: string) => `/api/extracts/${id}/reanchor`,
   manualCloze: "/api/activities/cloze",
 
+  /** Owner E */
+  readingQueue: "/api/reading/queue",
+  distillSource: (id: string) => `/api/distill/source/${id}`,
+  distillExtract: (extractId: string) => `/api/distill/extract/${extractId}`,
+  distillApprove: (extractId: string) => `/api/distill/extract/${extractId}/approve`,
+
   /** Owner C */
   aiExtracts: "/api/ai/extracts",
   aiNote: "/api/ai/note",
@@ -77,6 +83,35 @@ export const CreateExtractBody = z.object({
   suggested_by: z.enum(["human", "nemotron"]).default("human"),
   reason: z.string().trim().max(500).optional(),
   concepts: z.array(z.string().trim().min(1).max(80)).max(5).default([]),
+});
+
+/**
+ * One verb per trip through the reading queue, plus a priority nudge that can
+ * ride along with it or travel alone.
+ *
+ * - `keep`     accept an AI proposal; it stays in the queue, due as it was
+ * - `next`     read it, show it again later on a longer interval
+ * - `postpone` not now; pushes it out without counting as a reading
+ * - `dismiss`  never again
+ * - `distill`  it became a note or cards, so it has left the queue
+ * - `requeue`  undo a dismiss or distill; due immediately
+ */
+export const ReadingAction = z.enum(["keep", "next", "postpone", "dismiss", "distill", "requeue"]);
+
+export const PatchExtractBody = z
+  .object({
+    priority: z.number().int().min(0).max(100).optional(),
+    action: ReadingAction.optional(),
+  })
+  .refine(({ priority, action }) => priority !== undefined || action !== undefined, {
+    message: "Send a priority, an action, or both.",
+  });
+
+/** The reader's yes: the note as they left it, and the cards they kept. */
+export const ApproveDraftBody = z.object({
+  title: z.string().trim().min(1).max(200),
+  body_md: z.string().trim().min(1).max(1_000_000),
+  activities: z.array(ActivityPayload).max(12),
 });
 
 export const ManualClozeBody = z.object({
@@ -155,6 +190,9 @@ export type CreateNoteBody = z.infer<typeof CreateNoteBody>;
 export type PatchNoteBody = z.infer<typeof PatchNoteBody>;
 export type CreateExtractBody = z.infer<typeof CreateExtractBody>;
 export type ManualClozeBody = z.infer<typeof ManualClozeBody>;
+export type ReadingAction = z.infer<typeof ReadingAction>;
+export type PatchExtractBody = z.infer<typeof PatchExtractBody>;
+export type ApproveDraftBody = z.infer<typeof ApproveDraftBody>;
 export type AiExtractsBody = z.infer<typeof AiExtractsBody>;
 export type AiNoteBody = z.infer<typeof AiNoteBody>;
 export type AiActivitiesBody = z.infer<typeof AiActivitiesBody>;

@@ -14,6 +14,7 @@ import {
   conceptExtracts as seedConceptExtracts,
   conceptNotes as seedConceptNotes,
   concepts as seedConcepts,
+  extractNotes as seedExtractNotes,
   extracts as seedExtracts,
   notebookItems as seedNotebookItems,
   notebooks as seedNotebooks,
@@ -29,6 +30,8 @@ import type {
   ConceptExtractRow,
   ConceptNoteRow,
   ConceptRow,
+  DistillDraftRow,
+  ExtractNoteRow,
   ExtractRow,
   FeedRow,
   NotebookItemRow,
@@ -47,6 +50,8 @@ export type MemoryTables = {
   conceptNotes: ConceptNoteRow[];
   conceptExtracts: ConceptExtractRow[];
   extracts: ExtractRow[];
+  extractNotes: ExtractNoteRow[];
+  distillDrafts: DistillDraftRow[];
   notebooks: NotebookRow[];
   notebookItems: NotebookItemRow[];
   feeds: FeedRow[];
@@ -56,9 +61,30 @@ export type MemoryTables = {
   reviewEvents: ReviewEventRow[];
 };
 
+/**
+ * Seed extracts that already fed a note have been through the reading queue;
+ * the rest are waiting in it, due since the day they were made.
+ */
+function queueDefaults(extract: { id: string; created_at: string }) {
+  const distilled = seedExtractNotes.some(({ extract_id }) => extract_id === extract.id);
+  return {
+    queue_status: distilled ? ("distilled" as const) : ("queued" as const),
+    queue_due: extract.created_at,
+    queue_interval_days: 1,
+    queue_reps: 0,
+    queue_last_seen: null,
+  };
+}
+
 function seeded(): MemoryTables {
   return {
-    sources: seedSources.map((source) => ({ ...source, ingest_error: null })),
+    // Seed sources arrive with their extracts already chosen.
+    sources: seedSources.map((source) => ({
+      ...source,
+      ingest_error: null,
+      distill_status: "proposed" as const,
+      distill_error: null,
+    })),
     notes: seedNotes.map((note) => ({ ...note })),
     concepts: seedConcepts.map((concept) => ({ ...concept })),
     conceptNotes: seedConceptNotes.map((relation) => ({ ...relation })),
@@ -67,7 +93,10 @@ function seeded(): MemoryTables {
       ...extract,
       suggestion_reason: null,
       suggestion_concepts: [],
+      ...queueDefaults(extract),
     })),
+    extractNotes: seedExtractNotes.map((relation) => ({ ...relation })),
+    distillDrafts: [],
     notebooks: seedNotebooks.map((notebook) => ({
       ...notebook,
       cover_storage_key: notebook.cover_storage_key ?? null,
@@ -125,6 +154,24 @@ export function memory(): MemoryTables {
         isPublicCoverPath(notebook.cover_storage_key)
       ) {
         notebook.cover_storage_key = null;
+      }
+    }
+  }
+
+  if (existing.sources) {
+    for (const source of existing.sources) {
+      if (source.distill_status === undefined) {
+        source.distill_status = "none";
+        source.distill_error = null;
+      }
+    }
+  }
+
+  // Same again for the reading-queue columns on extracts.
+  if (existing.extracts) {
+    for (const extract of existing.extracts) {
+      if (extract.queue_status === undefined) {
+        Object.assign(extract, queueDefaults(extract));
       }
     }
   }

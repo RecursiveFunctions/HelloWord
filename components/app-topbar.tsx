@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Library, Settings } from "lucide-react";
+import { BookOpen, Library, ListOrdered, Settings } from "lucide-react";
 import { Flashcards } from "@/components/icons/flashcards";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 const nav = [
   { href: "/notebooks", label: "Notebooks", icon: BookOpen },
   { href: "/library", label: "Library", icon: Library },
+  // Read before Review: passages are read, distilled, and only then recalled.
+  { href: "/read", label: "Read", icon: ListOrdered },
   { href: "/review", label: "Review", icon: Flashcards },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -29,8 +31,15 @@ function DueBadge({ count }: { count: number }) {
   );
 }
 
-export function AppTopbar({ dueCount }: { dueCount: number }) {
+export function AppTopbar({
+  dueCount,
+  readCount,
+}: {
+  dueCount: number;
+  readCount: number;
+}) {
   const pathname = usePathname();
+  const badges: Record<string, number> = { "/review": dueCount, "/read": readCount };
 
   return (
     <>
@@ -61,7 +70,7 @@ export function AppTopbar({ dueCount }: { dueCount: number }) {
                 >
                   <Icon className={cn("size-6 shrink-0", active && "text-primary")} />
                   {item.label}
-                  {item.href === "/review" ? <DueBadge count={dueCount} /> : null}
+                  <DueBadge count={badges[item.href] ?? 0} />
                 </Link>
               );
             })}
@@ -74,7 +83,7 @@ export function AppTopbar({ dueCount }: { dueCount: number }) {
       {/* Phones: the tabs live at the bottom, where thumbs already are. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 grid h-(--bottombar-h) grid-cols-4 border-t bg-sidebar pb-[env(safe-area-inset-bottom)] text-sidebar-foreground md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid h-(--bottombar-h) grid-cols-5 border-t bg-sidebar pb-[env(safe-area-inset-bottom)] text-sidebar-foreground md:hidden"
       >
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
@@ -93,9 +102,9 @@ export function AppTopbar({ dueCount }: { dueCount: number }) {
             >
               <span className="relative">
                 <Icon className={cn("size-6", active && "text-primary")} />
-                {item.href === "/review" && dueCount > 0 ? (
+                {(badges[item.href] ?? 0) > 0 ? (
                   <span className="absolute -top-1.5 left-3.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-                    {dueCount}
+                    {badges[item.href]}
                   </span>
                 ) : null}
               </span>

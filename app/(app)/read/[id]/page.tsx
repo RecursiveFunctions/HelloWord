@@ -8,10 +8,9 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import extractProposals from "@/lib/ai/__fixtures__/extract-proposals.json";
-import { extractNotes } from "@/lib/seed";
-import { listSourceExtracts } from "@/lib/store/extracts";
+import { listSourceExtracts, listSourceExtractsAny } from "@/lib/store/extracts";
 import { getNotebook } from "@/lib/store/notebooks";
-import { getNote, listNotes } from "@/lib/store/notes";
+import { getNote, listExtractNotes, listNotes } from "@/lib/store/notes";
 import { storedPdfExists } from "@/lib/storage/pdf";
 import { getSource } from "@/lib/store/sources";
 import type { SourceRow } from "@/lib/store/types";
@@ -101,15 +100,21 @@ export default async function ReadPage({
 }) {
 	const { id } = await params;
 	const { notebook: notebookId } = await searchParams;
-	const [source, rawExtracts, notebookRow] = await Promise.all([
+	const [source, rawExtracts, everyExtract, notebookRow] = await Promise.all([
 		getSource(id),
 		listSourceExtracts(id),
+		listSourceExtractsAny(id),
 		notebookId ? getNotebook(notebookId) : null,
 	]);
 	if (!source) notFound();
 	const notebook = notebookRow
 		? { id: notebookRow.id, name: notebookRow.name }
 		: null;
+
+	// Proposals the distiller made that nobody has kept or dismissed yet.
+	const pendingProposals = everyExtract.filter(
+		(e) => !e.accepted && e.queue_status === "queued",
+	);
 
 	const anchoredExtracts = rawExtracts.filter(
 		(e) => e.anchor_status !== "detached",
@@ -137,9 +142,9 @@ export default async function ReadPage({
 		ready && source.kind === "pdf" && hasPdf && !source.markdown;
 	const markdownReader = ready && Boolean(source.markdown);
 
-	const linkedNoteId = extractNotes.find(({ extract_id }) =>
-		rawExtracts.some(({ id: extractId }) => extractId === extract_id),
-	)?.note_id;
+	const linkedNoteId = (
+		await listExtractNotes(rawExtracts.map(({ id: extractId }) => extractId))
+	)[0]?.note_id;
 	const note = linkedNoteId ? await getNote(linkedNoteId) : null;
 
 	if (markdownReader) {
@@ -155,12 +160,18 @@ export default async function ReadPage({
 				/>
 				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<ReaderShell
+						key={source.distill_status}
 						source={{
 							id: source.id,
 							title: source.title,
 							markdown: source.markdown!,
 						}}
 						initialExtracts={rawExtracts}
+						initialProposals={pendingProposals}
+						distill={{
+							status: source.distill_status,
+							error: source.distill_error,
+						}}
 						initialNote={note}
 						pdfFileUrl={
 							source.kind === "pdf" && hasPdf
