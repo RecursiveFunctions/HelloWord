@@ -36,6 +36,19 @@ export async function listExtracts(): Promise<ExtractRow[]> {
   return memory().extracts.filter((extract) => extract.accepted);
 }
 
+export async function getExtract(id: string): Promise<ExtractRow | null> {
+  if (dbConfigured()) {
+    const rows = await query(
+      `select ${COLUMNS} from extract where id = $1 and accepted limit 1`,
+      [id],
+    );
+    return rows[0] ? hydrate(rows[0]) : null;
+  }
+  return memory().extracts.find(
+    (extract) => extract.id === id && extract.accepted,
+  ) ?? null;
+}
+
 export async function listSourceExtracts(sourceId: string): Promise<ExtractRow[]> {
   if (dbConfigured()) {
     const rows = await query(

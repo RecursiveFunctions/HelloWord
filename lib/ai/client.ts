@@ -30,6 +30,8 @@ export type ChatJsonRequest = {
   temperature?: number;
   /** PLAN.md: "low" for extract candidates, "high" for drafting and generation. */
   reasoningEffort?: "low" | "high";
+  /** Normalize a common provider shape before applying the authoritative schema. */
+  normalize?: (value: unknown) => unknown;
 };
 
 export type AiResult<T> = {
@@ -205,7 +207,9 @@ export async function chatJson<T>(
       const loose = parseJsonLoose(raw);
       let complaint: string;
       if (loose.ok) {
-        const parsed = schema.safeParse(loose.value);
+        const parsed = schema.safeParse(
+          req.normalize ? req.normalize(loose.value) : loose.value,
+        );
         if (parsed.success) {
           return {
             value: parsed.data,

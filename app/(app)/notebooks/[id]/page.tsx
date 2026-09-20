@@ -2,16 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hashBody } from "@/lib/hash";
 import {
-  activityById,
   conceptExtracts,
   conceptNotes,
   concepts,
   diagnosticsForNotebook,
-  extractById,
-  noteById,
 } from "@/lib/seed";
 import { itemPreviewSrc } from "@/lib/store/previews";
+import { getExtract } from "@/lib/store/extracts";
 import { getNotebook, listNotebookItems } from "@/lib/store/notebooks";
+import { getNote } from "@/lib/store/notes";
+import { getActivity } from "@/lib/store/review";
 import { resolveNotebookColor } from "@/lib/themes";
 import { getSource } from "@/lib/store/sources";
 import {
@@ -172,7 +172,8 @@ async function resolve(
       };
     }
     case "note": {
-      const note = noteById(itemId);
+    case "note": {
+      const note = await getNote(itemId);
       if (!note) return null;
       return {
         ...noteItem(note),
@@ -180,7 +181,7 @@ async function resolve(
       };
     }
     case "extract": {
-      const extract = extractById(itemId);
+      const extract = await getExtract(itemId);
       if (!extract) return null;
       return {
         ...extractItem(extract),
@@ -192,7 +193,7 @@ async function resolve(
       };
     }
     case "activity": {
-      const activity = activityById(itemId);
+      const activity = await getActivity(itemId);
       if (!activity) return null;
       return {
         ...activityItem(activity),
@@ -202,6 +203,7 @@ async function resolve(
           activity.source_body_hash,
         ),
       };
+    }
     }
     default:
       return null;
